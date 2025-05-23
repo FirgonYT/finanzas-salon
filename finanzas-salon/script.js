@@ -48,3 +48,10 @@ function registrarEgreso() {
     motivo: motivo
   }).then(() => alert("Egreso registrado"));
 }
+
+// ✅ Verificar si hay sesión iniciada en dashboard
+auth.onAuthStateChanged((user) => {
+  if (!user && window.location.pathname.includes("dashboard.html")) {
+    window.location.href = "index.html";
+  }
+});
