@@ -4,16 +4,23 @@
   <meta charset="UTF-8" />
   <title>Login - Finanzas Salón</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #fff0f0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-    #login-box { background: #d43939; padding: 30px; border-radius: 8px; color: white; width: 300px; }
-    input { width: 100%; padding: 10px; margin: 8px 0; border: none; border-radius: 4px; }
-    button { width: 100%; background: #7b1f1f; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; }
+    body { font-family: Arial, sans-serif; background: #f0f0f0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    #login-box {
+      background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px #aaa; width: 300px;
+    }
+    input {
+      width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc;
+    }
+    button {
+      width: 100%; padding: 10px; background: #d43939; color: white; border: none; border-radius: 4px; cursor: pointer;
+      font-size: 16px;
+    }
     button:hover { background: #b22b2b; }
   </style>
 </head>
 <body>
   <div id="login-box">
-    <h2>Iniciar Sesión</h2>
+    <h2>Iniciar sesión</h2>
     <input type="email" id="email" placeholder="Correo electrónico" />
     <input type="password" id="password" placeholder="Contraseña" />
     <button onclick="login()">Entrar</button>
@@ -36,17 +43,21 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    window.login = () => {
-      const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value.trim();
-      if(!email || !password){
-        alert('Por favor, complete ambos campos');
+    async function login() {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      if (!email || !password) {
+        alert("Escribe correo y contraseña.");
         return;
       }
-      signInWithEmailAndPassword(auth, email, password)
-        .then(() => window.location.href = "dashboard.html")
-        .catch(e => alert("Error: " + e.message));
-    };
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        window.location.href = "dashboard.html";
+      } catch (e) {
+        alert("Error en login: " + e.message);
+      }
+    }
+    window.login = login;
   </script>
 </body>
 </html>
