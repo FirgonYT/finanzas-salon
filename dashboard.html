@@ -3,38 +3,385 @@
 <head>
   <meta charset="UTF-8" />
   <title>Dashboard - Finanzas Salón</title>
-  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* Aquí va el mismo CSS que ya tienes */
+    body { margin: 0; font-family: Arial, sans-serif; }
+    #sidebar {
+      background-color: #d43939;
+      width: 200px;
+      height: 100vh;
+      position: fixed;
+      top: 0; left: 0;
+      display: flex;
+      flex-direction: column;
+      padding-top: 20px;
+    }
+    #sidebar button {
+      background: transparent;
+      border: none;
+      color: white;
+      padding: 15px;
+      text-align: left;
+      font-size: 16px;
+      cursor: pointer;
+      border-left: 5px solid transparent;
+      transition: 0.3s;
+    }
+    #sidebar button:hover, #sidebar button.active {
+      background-color: #b22b2b;
+      border-left: 5px solid #ff726f;
+    }
+    #main-content {
+      margin-left: 200px;
+      padding: 20px;
+    }
+    section { display: none; }
+    section.active { display: block; }
+    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 10px; text-align: left; }
+    input, select, textarea {
+      padding: 8px;
+      margin: 6px 0;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    button.submit-btn {
+      background-color: #d43939;
+      border: none;
+      color: white;
+      padding: 10px 15px;
+      cursor: pointer;
+      border-radius: 4px;
+      margin-top: 10px;
+    }
+    button.submit-btn:hover {
+      background-color: #b22b2b;
+    }
+    .status-pagado { color: green; font-weight: bold; }
+    .status-menor-pago { color: orange; font-weight: bold; }
+    .status-no-pagado { color: red; font-weight: bold; }
+    .boton-ver-pagos, .boton-eliminar-pago {
+      background-color: #444;
+      border: none;
+      color: white;
+      padding: 5px 8px;
+      cursor: pointer;
+      border-radius: 3px;
+      font-size: 12px;
+      margin-left: 5px;
+    }
+    .boton-ver-pagos:hover, .boton-eliminar-pago:hover {
+      background-color: #666;
+    }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>Dashboard</h1>
-    <button id="btn-logout">Cerrar sesión</button>
-  </header>
-  <nav id="sidebar">
-    <button onclick="showSection('estudiantes')" class="active">Estudiantes</button>
+  <div id="sidebar">
+    <button class="active" onclick="showSection('estudiantes')">Estudiantes</button>
     <button onclick="showSection('pagos')">Pagos</button>
-    <button onclick="showSection('ingresos')">Ingresos</button>
-    <button onclick="showSection('egresos')">Egresos</button>
-  </nav>
+    <button onclick="showSection('finanzas')">Finanzas</button>
+    <button onclick="logout()">Salir</button>
+  </div>
 
-  <main>
+  <div id="main-content">
+    <!-- Estudiantes -->
     <section id="estudiantes" class="active">
-      <!-- Aquí va el contenido de estudiantes -->
+      <h2>Agregar Estudiante</h2>
+      <input type="text" id="estudiante-nombre" placeholder="Nombre completo" />
+      <button class="submit-btn" onclick="agregarEstudiante()">Añadir Estudiante</button>
+
+      <h3>Lista de Estudiantes (Estado pago mes actual)</h3>
+      <table id="tabla-estudiantes">
+        <thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody></tbody>
+      </table>
     </section>
 
+    <!-- Pagos por estudiante -->
     <section id="pagos">
-      <!-- Contenido pagos -->
+      <h2>Registrar Pago de Estudiante</h2>
+      <label for="select-estudiante">Seleccione estudiante:</label>
+      <select id="select-estudiante"></select>
+
+      <label for="pago-monto">Monto (COP):</label>
+      <input type="number" id="pago-monto" placeholder="Ejemplo: 50000" />
+
+      <button class="submit-btn" onclick="registrarPago()">Registrar Pago</button>
     </section>
 
-    <section id="ingresos">
-      <!-- Contenido ingresos -->
+    <!-- Pagos individuales estudiante -->
+    <section id="detalle-pagos">
+      <h2>Pagos del estudiante: <span id="nombre-estudiante-detalle"></span></h2>
+      <button class="submit-btn" onclick="volverAEstudiantes()">Volver a lista de estudiantes</button>
+      <table id="tabla-pagos-detalle">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Monto (COP)</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <th>Total Pagado este mes</th>
+            <th id="total-pagado"></th>
+            <th></th>
+          </tr>
+          <tr>
+            <th>Estado</th>
+            <th id="estado-pago-detalle"></th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
     </section>
 
-    <section id="egresos">
-      <!-- Contenido egresos -->
+    <!-- Finanzas -->
+    <section id="finanzas">
+      <h2>Finanzas</h2>
+      <!-- Aquí se añadirá contenido más adelante -->
+      <p>Contenido en construcción...</p>
     </section>
-  </main>
+  </div>
 
-  <script type="module" src="js/main-dashboard.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
+      authDomain: "finanzas-salon.firebaseapp.com",
+      projectId: "finanzas-salon",
+      storageBucket: "finanzas-salon.firebasestorage.app",
+      messagingSenderId: "550307448425",
+      appId: "1:550307448425:web:dd755a9ad2a22e009044f8",
+      measurementId: "G-MXET3PGMF8"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    function showSection(id) {
+      document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      const btn = document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`);
+      if(btn) btn.classList.add("active");
+
+      if(id === 'estudiantes' || id === 'pagos') {
+        cargarEstudiantes();
+        cargarSelectEstudiantes();
+      }
+    }
+    window.showSection = showSection;
+
+    function logout() {
+      signOut(auth).then(() => window.location.href = "index.html");
+    }
+    window.logout = logout;
+
+    async function agregarEstudiante() {
+      const nombre = document.getElementById("estudiante-nombre").value.trim();
+      if (!nombre) {
+        alert("Por favor, escribe el nombre del estudiante.");
+        return;
+      }
+      try {
+        await addDoc(collection(db, "estudiantes"), {
+          nombre,
+          creadoEn: new Date()
+        });
+        alert("Estudiante agregado.");
+        document.getElementById("estudiante-nombre").value = "";
+        cargarEstudiantes();
+        cargarSelectEstudiantes();
+      } catch (e) {
+        alert("Error agregando estudiante: " + e.message);
+      }
+    }
+    window.agregarEstudiante = agregarEstudiante;
+
+    async function cargarEstudiantes() {
+      const tbody = document.querySelector("#tabla-estudiantes tbody");
+      tbody.innerHTML = "";
+
+      const hoy = new Date();
+      const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+
+      try {
+        const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
+        for (const docEstudiante of estudiantesSnapshot.docs) {
+          const estudianteId = docEstudiante.id;
+          const nombre = docEstudiante.data().nombre;
+
+          const pagosQuery = query(collection(db, "pagos"),
+            where("idEstudiante", "==", estudianteId),
+            where("mes", "==", mesActual)
+          );
+          const pagosSnapshot = await getDocs(pagosQuery);
+
+          let sumaPagos = 0;
+          pagosSnapshot.forEach(pagoDoc => {
+            sumaPagos += pagoDoc.data().monto;
+          });
+
+          let estadoTexto = "";
+          let estadoClase = "";
+          if (sumaPagos >= 15000) {
+            estadoTexto = "Al día";
+            estadoClase = "status-pagado";
+          } else if (sumaPagos > 0 && sumaPagos < 15000) {
+            estadoTexto = "Al día con menor pago";
+            estadoClase = "status-menor-pago";
+          } else {
+            estadoTexto = "No al día";
+            estadoClase = "status-no-pagado";
+          }
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${nombre}</td>
+            <td class="${estadoClase}">${estadoTexto}</td>
+            <td><button class="boton-ver-pagos" onclick="verPagosEstudiante('${estudianteId}', '${nombre}')">Ver pagos</button></td>
+          `;
+          tbody.appendChild(tr);
+        }
+      } catch (e) {
+        alert("Error cargando estudiantes: " + e.message);
+      }
+    }
+    window.cargarEstudiantes = cargarEstudiantes;
+
+    async function cargarSelectEstudiantes() {
+      const select = document.getElementById("select-estudiante");
+      select.innerHTML = '<option value="">-- Seleccione --</option>';
+      try {
+        const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
+        estudiantesSnapshot.forEach(doc => {
+          const nombre = doc.data().nombre;
+          const id = doc.id;
+          const option = document.createElement("option");
+          option.value = id;
+          option.textContent = nombre;
+          select.appendChild(option);
+        });
+      } catch (e) {
+        alert("Error cargando estudiantes para pago: " + e.message);
+      }
+    }
+    window.cargarSelectEstudiantes = cargarSelectEstudiantes;
+
+    async function registrarPago() {
+      const idEstudiante = document.getElementById("select-estudiante").value;
+      const monto = parseInt(document.getElementById("pago-monto").value);
+      if (!idEstudiante) {
+        alert("Selecciona un estudiante.");
+        return;
+      }
+      if (!monto || monto <= 0) {
+        alert("Ingresa un monto válido.");
+        return;
+      }
+      const hoy = new Date();
+      const mes = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+      try {
+        await addDoc(collection(db, "pagos"), {
+          idEstudiante,
+          monto,
+          fecha: hoy.toISOString(),
+          mes
+        });
+        alert("Pago registrado.");
+        document.getElementById("pago-monto").value = "";
+      } catch (e) {
+        alert("Error registrando pago: " + e.message);
+      }
+    }
+    window.registrarPago = registrarPago;
+
+    async function verPagosEstudiante(idEstudiante, nombre) {
+      showSection("detalle-pagos");
+      document.getElementById("nombre-estudiante-detalle").textContent = nombre;
+
+      const tbody = document.querySelector("#tabla-pagos-detalle tbody");
+      tbody.innerHTML = "";
+
+      const hoy = new Date();
+      const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+
+      let sumaPagos = 0;
+
+      try {
+        const pagosQuery = query(collection(db, "pagos"),
+          where("idEstudiante", "==", idEstudiante),
+          where("mes", "==", mesActual),
+          orderBy("fecha", "desc")
+        );
+        const pagosSnapshot = await getDocs(pagosQuery);
+
+        pagosSnapshot.forEach(pagoDoc => {
+          const pago = pagoDoc.data();
+          sumaPagos += pago.monto;
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${new Date(pago.fecha).toLocaleDateString()}</td>
+            <td>${pago.monto}</td>
+            <td><button class="boton-eliminar-pago" onclick="eliminarPago('${pagoDoc.id}', '${idEstudiante}', '${nombre}')">Eliminar</button></td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        document.getElementById("total-pagado").textContent = sumaPagos;
+
+        const estadoPagoEl = document.getElementById("estado-pago-detalle");
+        if (sumaPagos >= 15000) {
+          estadoPagoEl.textContent = "Al día";
+          estadoPagoEl.className = "status-pagado";
+        } else if (sumaPagos > 0 && sumaPagos < 15000) {
+          estadoPagoEl.textContent = "Al día con menor pago";
+          estadoPagoEl.className = "status-menor-pago";
+        } else {
+          estadoPagoEl.textContent = "No al día";
+          estadoPagoEl.className = "status-no-pagado";
+        }
+      } catch (e) {
+        alert("Error cargando pagos: " + e.message);
+      }
+    }
+    window.verPagosEstudiante = verPagosEstudiante;
+
+    async function eliminarPago(idPago, idEstudiante, nombre) {
+      if (!confirm("¿Seguro que quieres eliminar este pago?")) return;
+      try {
+        await deleteDoc(doc(db, "pagos", idPago));
+        alert("Pago eliminado.");
+        verPagosEstudiante(idEstudiante, nombre);
+      } catch (e) {
+        alert("Error eliminando pago: " + e.message);
+      }
+    }
+    window.eliminarPago = eliminarPago;
+
+    function volverAEstudiantes() {
+      showSection("estudiantes");
+    }
+    window.volverAEstudiantes = volverAEstudiantes;
+
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        window.location.href = "index.html";
+      } else {
+        cargarEstudiantes();
+        cargarSelectEstudiantes();
+      }
+    });
+  </script>
 </body>
 </html>
