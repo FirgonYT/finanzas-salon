@@ -66,6 +66,7 @@
 <body>
   <div id="sidebar">
     <button class="active" onclick="showSection('estudiantes')">Estudiantes</button>
+    <button onclick="showSection('pagos')">Pagos</button>
     <button onclick="showSection('ingresos')">Ingresos</button>
     <button onclick="showSection('egresos')">Egresos</button>
     <button onclick="logout()">Salir</button>
@@ -85,9 +86,21 @@
       </table>
     </section>
 
+    <!-- Pagos por estudiante -->
+    <section id="pagos">
+      <h2>Registrar Pago de Estudiante</h2>
+      <label for="select-estudiante">Seleccione estudiante:</label>
+      <select id="select-estudiante"></select>
+
+      <label for="pago-monto">Monto (COP):</label>
+      <input type="number" id="pago-monto" placeholder="Ejemplo: 50000" />
+
+      <button class="submit-btn" onclick="registrarPago()">Registrar Pago</button>
+    </section>
+
     <!-- Ingresos -->
     <section id="ingresos">
-      <h2>Registrar Ingreso</h2>
+      <h2>Registrar Ingreso General</h2>
       <input type="number" id="ingreso-monto" placeholder="Monto (COP)" />
       <input type="text" id="ingreso-desc" placeholder="Descripción" />
       <button class="submit-btn" onclick="registrarIngreso()">Registrar Ingreso</button>
@@ -127,6 +140,11 @@
       document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
       document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`).classList.add("active");
+
+      if(id === 'estudiantes' || id === 'pagos') {
+        cargarEstudiantes();
+        cargarSelectEstudiantes();
+      }
     }
     window.showSection = showSection;
 
@@ -151,18 +169,18 @@
         alert("Estudiante agregado.");
         document.getElementById("estudiante-nombre").value = "";
         cargarEstudiantes();
+        cargarSelectEstudiantes();
       } catch (e) {
         alert("Error agregando estudiante: " + e.message);
       }
     }
     window.agregarEstudiante = agregarEstudiante;
 
-    // Cargar estudiantes y mostrar su estado (si pagó o no el mes actual)
+    // Cargar estudiantes y mostrar estado pago
     async function cargarEstudiantes() {
       const tbody = document.querySelector("#tabla-estudiantes tbody");
       tbody.innerHTML = "";
 
-      // Obtener mes actual en formato YYYY-MM
       const hoy = new Date();
       const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
 
@@ -171,22 +189,18 @@
         for (const estudianteDoc of estudiantesSnapshot.docs) {
           const estudianteData = estudianteDoc.data();
 
-          // Consultar si hay pago de ese estudiante para el mes actual
+          // Buscar pagos para ese estudiante y mes
           const pagosQuery = query(collection(db, "pagos"),
             where("idEstudiante", "==", estudianteDoc.id),
             where("mes", "==", mesActual)
           );
           const pagosSnapshot = await getDocs(pagosQuery);
-
           const pagado = pagosSnapshot.size > 0;
 
-          // Crear fila con nombre y estado
           const tr = document.createElement("tr");
           tr.innerHTML = `
             <td>${estudianteData.nombre}</td>
-            <td class="${pagado ? 'status-pagado' : 'status-no-pagado'}">
-              ${pagado ? "Al día" : "No al día"}
-            </td>
+            <td class="${pagado ? 'status-pagado' : 'status-no-pagado'}">${pagado ? "Al día" : "No al día"}</td>
           `;
           tbody.appendChild(tr);
         }
@@ -194,8 +208,73 @@
         alert("Error cargando estudiantes: " + e.message);
       }
     }
+    window.cargarEstudiantes = cargarEstudiantes;
 
-    // Registrar ingreso (pagos o ingresos)
+    // Cargar estudiantes para select
+    async function cargarSelectEstudiantes() {
+      const select = document.getElementById("select-estudiante");
+      select.innerHTML = "<option value=''>-- Seleccione estudiante --</option>";
+      try {
+        const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
+        estudiantesSnapshot.forEach(doc => {
+          const nombre = doc.data().nombre;
+          const id = doc.id;
+          const option = document.createElement("option");
+          option.value = id;
+          option.textContent = nombre;
+          select.appendChild(option);
+        });
+      } catch (e) {
+        alert("Error cargando estudiantes para pago: " + e.message);
+      }
+    }
+    window.cargarSelectEstudiantes = cargarSelectEstudiantes;
+
+    // Registrar pago por estudiante para mes actual
+    async function registrarPago() {
+      const idEstudiante = document.getElementById("select-estudiante").value;
+      const monto = Number(document.getElementById("pago-monto").value);
+      if (!idEstudiante) {
+        alert("Selecciona un estudiante.");
+        return;
+      }
+      if (!monto || monto <= 0) {
+        alert("Escribe un monto válido.");
+        return;
+      }
+      const hoy = new Date();
+      const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+
+      try {
+        // Verificar si ya hay un pago registrado para este mes y estudiante
+        const pagosQuery = query(collection(db, "pagos"),
+          where("idEstudiante", "==", idEstudiante),
+          where("mes", "==", mesActual)
+        );
+        const pagosSnapshot = await getDocs(pagosQuery);
+
+        if (pagosSnapshot.size > 0) {
+          alert("Este estudiante ya tiene un pago registrado para este mes.");
+          return;
+        }
+
+        await addDoc(collection(db, "pagos"), {
+          idEstudiante,
+          monto,
+          mes: mesActual,
+          fechaPago: new Date()
+        });
+
+        alert("Pago registrado.");
+        document.getElementById("pago-monto").value = "";
+        cargarEstudiantes(); // refrescar estado pago
+      } catch (e) {
+        alert("Error registrando pago: " + e.message);
+      }
+    }
+    window.registrarPago = registrarPago;
+
+    // Registrar ingreso general
     async function registrarIngreso() {
       const monto = Number(document.getElementById("ingreso-monto").value);
       const desc = document.getElementById("ingreso-desc").value.trim();
@@ -219,7 +298,7 @@
     }
     window.registrarIngreso = registrarIngreso;
 
-    // Registrar egreso
+    // Registrar egreso general
     async function registrarEgreso() {
       const monto = Number(document.getElementById("egreso-monto").value);
       const desc = document.getElementById("egreso-desc").value.trim();
@@ -243,12 +322,13 @@
     }
     window.registrarEgreso = registrarEgreso;
 
-    // Verificar usuario logueado
+    // Verificar si usuario está autenticado, si no mandar a login
     onAuthStateChanged(auth, user => {
       if (!user) {
         window.location.href = "index.html";
       } else {
         cargarEstudiantes();
+        cargarSelectEstudiantes();
       }
     });
   </script>
