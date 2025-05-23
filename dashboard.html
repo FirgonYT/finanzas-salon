@@ -60,7 +60,20 @@
       background-color: #b22b2b;
     }
     .status-pagado { color: green; font-weight: bold; }
+    .status-menor-pago { color: orange; font-weight: bold; }
     .status-no-pagado { color: red; font-weight: bold; }
+    .boton-ver-pagos {
+      background-color: #444;
+      border: none;
+      color: white;
+      padding: 5px 8px;
+      cursor: pointer;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+    .boton-ver-pagos:hover {
+      background-color: #666;
+    }
   </style>
 </head>
 <body>
@@ -81,7 +94,7 @@
 
       <h3>Lista de Estudiantes (Estado pago mes actual)</h3>
       <table id="tabla-estudiantes">
-        <thead><tr><th>Nombre</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody></tbody>
       </table>
     </section>
@@ -96,6 +109,26 @@
       <input type="number" id="pago-monto" placeholder="Ejemplo: 50000" />
 
       <button class="submit-btn" onclick="registrarPago()">Registrar Pago</button>
+    </section>
+
+    <!-- Pagos individuales estudiante -->
+    <section id="detalle-pagos">
+      <h2>Pagos del estudiante: <span id="nombre-estudiante-detalle"></span></h2>
+      <button class="submit-btn" onclick="volverAEstudiantes()">Volver a lista de estudiantes</button>
+      <table id="tabla-pagos-detalle">
+        <thead><tr><th>Fecha</th><th>Monto (COP)</th></tr></thead>
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <th>Total Pagado este mes</th>
+            <th id="total-pagado"></th>
+          </tr>
+          <tr>
+            <th>Estado</th>
+            <th id="estado-pago-detalle"></th>
+          </tr>
+        </tfoot>
+      </table>
     </section>
 
     <!-- Ingresos -->
@@ -118,7 +151,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
@@ -134,13 +167,14 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Mostrar y ocultar secciones
     function showSection(id) {
       document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active"));
       document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
       document.getElementById(id).classList.add("active");
-      document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`).classList.add("active");
+      const btn = document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`);
+      if(btn) btn.classList.add("active");
 
+      // Cuando vuelves a estudiantes o pagos, recarga datos
       if(id === 'estudiantes' || id === 'pagos') {
         cargarEstudiantes();
         cargarSelectEstudiantes();
@@ -148,13 +182,11 @@
     }
     window.showSection = showSection;
 
-    // Logout
     function logout() {
       signOut(auth).then(() => window.location.href = "index.html");
     }
     window.logout = logout;
 
-    // Agregar estudiante
     async function agregarEstudiante() {
       const nombre = document.getElementById("estudiante-nombre").value.trim();
       if (!nombre) {
@@ -176,7 +208,6 @@
     }
     window.agregarEstudiante = agregarEstudiante;
 
-    // Cargar estudiantes y mostrar estado pago
     async function cargarEstudiantes() {
       const tbody = document.querySelector("#tabla-estudiantes tbody");
       tbody.innerHTML = "";
@@ -186,21 +217,41 @@
 
       try {
         const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
-        for (const estudianteDoc of estudiantesSnapshot.docs) {
-          const estudianteData = estudianteDoc.data();
+        for (const docEstudiante of estudiantesSnapshot.docs) {
+          const estudianteId = docEstudiante.id;
+          const nombre = docEstudiante.data().nombre;
 
-          // Buscar pagos para ese estudiante y mes
+          // Buscar pagos del mes actual
           const pagosQuery = query(collection(db, "pagos"),
-            where("idEstudiante", "==", estudianteDoc.id),
+            where("idEstudiante", "==", estudianteId),
             where("mes", "==", mesActual)
           );
           const pagosSnapshot = await getDocs(pagosQuery);
-          const pagado = pagosSnapshot.size > 0;
+
+          // Sumar montos pagos en mes actual
+          let sumaPagos = 0;
+          pagosSnapshot.forEach(pagoDoc => {
+            sumaPagos += pagoDoc.data().monto;
+          });
+
+          let estadoTexto = "";
+          let estadoClase = "";
+          if (sumaPagos >= 15000) {
+            estadoTexto = "Al día";
+            estadoClase = "status-pagado";
+          } else if (sumaPagos > 0 && sumaPagos < 15000) {
+            estadoTexto = "Al día con menor pago";
+            estadoClase = "status-menor-pago";
+          } else {
+            estadoTexto = "No al día";
+            estadoClase = "status-no-pagado";
+          }
 
           const tr = document.createElement("tr");
           tr.innerHTML = `
-            <td>${estudianteData.nombre}</td>
-            <td class="${pagado ? 'status-pagado' : 'status-no-pagado'}">${pagado ? "Al día" : "No al día"}</td>
+            <td>${nombre}</td>
+            <td class="${estadoClase}">${estadoTexto}</td>
+            <td><button class="boton-ver-pagos" onclick="verPagosEstudiante('${estudianteId}', '${nombre}')">Ver pagos</button></td>
           `;
           tbody.appendChild(tr);
         }
@@ -210,10 +261,9 @@
     }
     window.cargarEstudiantes = cargarEstudiantes;
 
-    // Cargar estudiantes para select
     async function cargarSelectEstudiantes() {
       const select = document.getElementById("select-estudiante");
-      select.innerHTML = "<option value=''>-- Seleccione estudiante --</option>";
+      select.innerHTML = '<option value="">-- Seleccione --</option>';
       try {
         const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
         estudiantesSnapshot.forEach(doc => {
@@ -230,7 +280,6 @@
     }
     window.cargarSelectEstudiantes = cargarSelectEstudiantes;
 
-    // Registrar pago por estudiante para mes actual
     async function registrarPago() {
       const idEstudiante = document.getElementById("select-estudiante").value;
       const monto = Number(document.getElementById("pago-monto").value);
@@ -246,18 +295,8 @@
       const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
 
       try {
-        // Verificar si ya hay un pago registrado para este mes y estudiante
-        const pagosQuery = query(collection(db, "pagos"),
-          where("idEstudiante", "==", idEstudiante),
-          where("mes", "==", mesActual)
-        );
-        const pagosSnapshot = await getDocs(pagosQuery);
-
-        if (pagosSnapshot.size > 0) {
-          alert("Este estudiante ya tiene un pago registrado para este mes.");
-          return;
-        }
-
+        // No impedir pagar dos veces al mes, porque puede pagar más de 15000 en varias veces
+        // Solo registrar pago
         await addDoc(collection(db, "pagos"), {
           idEstudiante,
           monto,
@@ -267,14 +306,80 @@
 
         alert("Pago registrado.");
         document.getElementById("pago-monto").value = "";
-        cargarEstudiantes(); // refrescar estado pago
+        cargarEstudiantes();
       } catch (e) {
         alert("Error registrando pago: " + e.message);
       }
     }
     window.registrarPago = registrarPago;
 
-    // Registrar ingreso general
+    async function verPagosEstudiante(idEstudiante, nombre) {
+      // Mostrar sección detalle pagos y ocultar estudiantes
+      showSection("detalle-pagos");
+      document.getElementById("nombre-estudiante-detalle").textContent = nombre;
+
+      const tbody = document.querySelector("#tabla-pagos-detalle tbody");
+      tbody.innerHTML = "";
+
+      const hoy = new Date();
+      const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+
+      try {
+        // Traer todos pagos ordenados por fecha asc
+        const pagosQuery = query(collection(db, "pagos"),
+          where("idEstudiante", "==", idEstudiante),
+          orderBy("fechaPago", "asc")
+        );
+        const pagosSnapshot = await getDocs(pagosQuery);
+
+        let sumaPagosMes = 0;
+        pagosSnapshot.forEach(pagoDoc => {
+          const data = pagoDoc.data();
+          const fecha = data.fechaPago.toDate ? data.fechaPago.toDate() : new Date(data.fechaPago);
+          const fechaStr = fecha.toLocaleDateString();
+          const monto = data.monto;
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${fechaStr}</td><td>${monto.toLocaleString("es-CO", {style:"currency", currency:"COP"})}</td>`;
+          tbody.appendChild(tr);
+
+          // Sumar solo pagos del mes actual para estado
+          const pagoMes = data.mes;
+          if(pagoMes === mesActual){
+            sumaPagosMes += monto;
+          }
+        });
+
+        document.getElementById("total-pagado").textContent = sumaPagosMes.toLocaleString("es-CO", {style:"currency", currency:"COP"});
+
+        // Estado del pago segun suma mes actual
+        let estadoTexto = "";
+        let estadoClase = "";
+        if (sumaPagosMes >= 15000) {
+          estadoTexto = "Al día";
+          estadoClase = "status-pagado";
+        } else if (sumaPagosMes > 0 && sumaPagosMes < 15000) {
+          estadoTexto = "Al día con menor pago";
+          estadoClase = "status-menor-pago";
+        } else {
+          estadoTexto = "No al día";
+          estadoClase = "status-no-pagado";
+        }
+        const estadoEl = document.getElementById("estado-pago-detalle");
+        estadoEl.textContent = estadoTexto;
+        estadoEl.className = estadoClase;
+
+      } catch (e) {
+        alert("Error cargando pagos: " + e.message);
+      }
+    }
+    window.verPagosEstudiante = verPagosEstudiante;
+
+    function volverAEstudiantes() {
+      showSection("estudiantes");
+    }
+    window.volverAEstudiantes = volverAEstudiantes;
+
     async function registrarIngreso() {
       const monto = Number(document.getElementById("ingreso-monto").value);
       const desc = document.getElementById("ingreso-desc").value.trim();
@@ -282,7 +387,6 @@
         alert("Por favor, escribe un monto válido y descripción.");
         return;
       }
-
       try {
         await addDoc(collection(db, "ingresos"), {
           monto,
@@ -298,7 +402,6 @@
     }
     window.registrarIngreso = registrarIngreso;
 
-    // Registrar egreso general
     async function registrarEgreso() {
       const monto = Number(document.getElementById("egreso-monto").value);
       const desc = document.getElementById("egreso-desc").value.trim();
@@ -306,7 +409,6 @@
         alert("Por favor, escribe un monto válido y motivo.");
         return;
       }
-
       try {
         await addDoc(collection(db, "egresos"), {
           monto,
@@ -322,7 +424,7 @@
     }
     window.registrarEgreso = registrarEgreso;
 
-    // Verificar si usuario está autenticado, si no mandar a login
+    // Verificar autenticación
     onAuthStateChanged(auth, user => {
       if (!user) {
         window.location.href = "index.html";
