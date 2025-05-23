@@ -3,211 +3,38 @@
 <head>
   <meta charset="UTF-8" />
   <title>Dashboard - Finanzas Salón</title>
-  <style>
-    /* Aquí va el mismo CSS que ya tienes */
-    body { margin: 0; font-family: Arial, sans-serif; }
-    #sidebar {
-      background-color: #d43939;
-      width: 200px;
-      height: 100vh;
-      position: fixed;
-      top: 0; left: 0;
-      display: flex;
-      flex-direction: column;
-      padding-top: 20px;
-    }
-    #sidebar button {
-      background: transparent;
-      border: none;
-      color: white;
-      padding: 15px;
-      text-align: left;
-      font-size: 16px;
-      cursor: pointer;
-      border-left: 5px solid transparent;
-      transition: 0.3s;
-    }
-    #sidebar button:hover, #sidebar button.active {
-      background-color: #b22b2b;
-      border-left: 5px solid #ff726f;
-    }
-    #main-content {
-      margin-left: 200px;
-      padding: 20px;
-    }
-    section { display: none; }
-    section.active { display: block; }
-    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
-    table, th, td { border: 1px solid #ccc; }
-    th, td { padding: 10px; text-align: left; }
-    input, select, textarea {
-      padding: 8px;
-      margin: 6px 0;
-      width: 100%;
-      box-sizing: border-box;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-    }
-    button.submit-btn {
-      background-color: #d43939;
-      border: none;
-      color: white;
-      padding: 10px 15px;
-      cursor: pointer;
-      border-radius: 4px;
-      margin-top: 10px;
-    }
-    button.submit-btn:hover {
-      background-color: #b22b2b;
-    }
-    .status-pagado { color: green; font-weight: bold; }
-    .status-menor-pago { color: orange; font-weight: bold; }
-    .status-no-pagado { color: red; font-weight: bold; }
-    .boton-ver-pagos, .boton-eliminar-pago {
-      background-color: #444;
-      border: none;
-      color: white;
-      padding: 5px 8px;
-      cursor: pointer;
-      border-radius: 3px;
-      font-size: 12px;
-      margin-left: 5px;
-    }
-    .boton-ver-pagos:hover, .boton-eliminar-pago:hover {
-      background-color: #666;
-    }
-  </style>
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <div id="sidebar">
-    <button class="active" onclick="showSection('estudiantes')">Estudiantes</button>
+  <header>
+    <h1>Dashboard</h1>
+    <button id="btn-logout">Cerrar sesión</button>
+  </header>
+  <nav id="sidebar">
+    <button onclick="showSection('estudiantes')" class="active">Estudiantes</button>
     <button onclick="showSection('pagos')">Pagos</button>
-    <button onclick="showSection('finanzas')">Finanzas</button>
-    <button onclick="logout()">Salir</button>
-  </div>
+    <button onclick="showSection('ingresos')">Ingresos</button>
+    <button onclick="showSection('egresos')">Egresos</button>
+  </nav>
 
-  <div id="main-content">
-    <!-- Sección Finanzas -->
-    <section id="finanzas">
-      <h2>Resumen Financiero</h2>
-      <div id="resumen-finanzas">
-        <p><strong>Total Ingresos:</strong> <span id="total-ingresos"></span></p>
-        <p><strong>Total Egresos:</strong> <span id="total-egresos"></span></p>
-        <p><strong>Balance Neto:</strong> <span id="balance-neto"></span></p>
-      </div>
-
-      <h3>Ingresos por Mes</h3>
-      <table id="tabla-mensual">
-        <thead>
-          <tr><th>Mes</th><th>Total Ingresos</th></tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <h3>Registrar Gasto</h3>
-      <input type="number" id="egreso-monto" placeholder="Monto (COP)" />
-      <input type="text" id="egreso-desc" placeholder="Motivo" />
-      <button class="submit-btn" onclick="registrarEgreso()">Registrar Gasto</button>
+  <main>
+    <section id="estudiantes" class="active">
+      <!-- Aquí va el contenido de estudiantes -->
     </section>
-  </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+    <section id="pagos">
+      <!-- Contenido pagos -->
+    </section>
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
-      authDomain: "finanzas-salon.firebaseapp.com",
-      projectId: "finanzas-salon",
-      storageBucket: "finanzas-salon.appspot.com",
-      messagingSenderId: "550307448425",
-      appId: "1:550307448425:web:dd755a9ad2a22e009044f8",
-      measurementId: "G-MXET3PGMF8"
-    };
+    <section id="ingresos">
+      <!-- Contenido ingresos -->
+    </section>
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    <section id="egresos">
+      <!-- Contenido egresos -->
+    </section>
+  </main>
 
-    function showSection(id) {
-      document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active"));
-      document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-      const btn = document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`);
-      if (btn) btn.classList.add("active");
-      if (id === 'finanzas') cargarFinanzas();
-    }
-    window.showSection = showSection;
-
-    function logout() {
-      signOut(auth).then(() => window.location.href = "index.html");
-    }
-    window.logout = logout;
-
-    async function cargarFinanzas() {
-      const ingresosSnapshot = await getDocs(collection(db, "pagos"));
-      const egresosSnapshot = await getDocs(collection(db, "egresos"));
-
-      let totalIngresos = 0;
-      let ingresosPorMes = {};
-      ingresosSnapshot.forEach(doc => {
-        const data = doc.data();
-        const fecha = new Date(data.fechaPago?.seconds * 1000 || Date.now());
-        const mes = fecha.toLocaleString("es-CO", { month: "long", year: "numeric" });
-        ingresosPorMes[mes] = (ingresosPorMes[mes] || 0) + data.monto;
-        totalIngresos += data.monto;
-      });
-
-      let totalEgresos = 0;
-      egresosSnapshot.forEach(doc => {
-        const data = doc.data();
-        totalEgresos += data.monto;
-      });
-
-      document.getElementById("total-ingresos").textContent = totalIngresos.toLocaleString("es-CO", { style: "currency", currency: "COP" });
-      document.getElementById("total-egresos").textContent = totalEgresos.toLocaleString("es-CO", { style: "currency", currency: "COP" });
-      document.getElementById("balance-neto").textContent = (totalIngresos - totalEgresos).toLocaleString("es-CO", { style: "currency", currency: "COP" });
-
-      const tbody = document.querySelector("#tabla-mensual tbody");
-      tbody.innerHTML = "";
-      for (const [mes, monto] of Object.entries(ingresosPorMes)) {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${mes}</td><td>${monto.toLocaleString("es-CO", { style: "currency", currency: "COP" })}</td>`;
-        tbody.appendChild(tr);
-      }
-    }
-
-    async function registrarEgreso() {
-      const monto = Number(document.getElementById("egreso-monto").value);
-      const motivo = document.getElementById("egreso-desc").value.trim();
-
-      if (!monto || monto <= 0) return alert("Ingresa un monto válido.");
-      if (!motivo) return alert("Agrega un motivo.");
-
-      try {
-        await addDoc(collection(db, "egresos"), {
-          monto,
-          motivo,
-          fecha: new Date()
-        });
-        alert("Egreso registrado.");
-        document.getElementById("egreso-monto").value = "";
-        document.getElementById("egreso-desc").value = "";
-        cargarFinanzas();
-      } catch (e) {
-        alert("Error registrando egreso: " + e.message);
-      }
-    }
-    window.registrarEgreso = registrarEgreso;
-
-    onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        window.location.href = "index.html";
-      } else {
-        cargarFinanzas();
-      }
-    });
-  </script>
+  <script type="module" src="js/main-dashboard.js"></script>
 </body>
 </html>
