@@ -1,34 +1,44 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Panel Finanzas</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel de Finanzas</title>
+  <link rel="stylesheet" href="style.css">
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
   <script src="script.js" defer></script>
-
-  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>Panel de Finanzas del Salón</h1>
-  <button onclick="logout()">Cerrar sesión</button>
-
-  <h2>Estudiantes</h2>
-  <div id="estudiantes-lista"></div>
-
-  <h2>Registrar Ingreso</h2>
-  <input id="ingreso-monto" type="number" placeholder="Monto">
-  <input id="ingreso-desc" type="text" placeholder="Descripción">
-  <button onclick="registrarIngreso()">Registrar</button>
-
-  <h2>Registrar Egreso</h2>
-  <input id="egreso-monto" type="number" placeholder="Monto">
-  <input id="egreso-desc" type="text" placeholder="Motivo">
-  <button onclick="registrarEgreso()">Registrar</button>
-
-  <h2>Listado de Ingresos y Egresos</h2>
-  <div id="ingresos-lista"></div>
-  <div id="egresos-lista"></div>
+  <div class="dashboard-container">
+    <nav class="sidebar">
+      <h2>💰 Finanzas</h2>
+      <button onclick="mostrar('inicio')"><i class="fas fa-home"></i> Inicio</button>
+      <button onclick="mostrar('ingresos')"><i class="fas fa-arrow-down"></i> Ingresos</button>
+      <button onclick="mostrar('egresos')"><i class="fas fa-arrow-up"></i> Egresos</button>
+      <button onclick="mostrar('facturas')"><i class="fas fa-file-invoice"></i> Facturas</button>
+      <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Salir</button>
+    </nav>
+    <main class="contenido">
+      <section id="inicio">Bienvenido al panel de finanzas.</section>
+      <section id="ingresos" style="display:none;">
+        <h2>Registrar Ingreso</h2>
+        <input type="number" id="ingreso-monto" placeholder="Monto" />
+        <input type="text" id="ingreso-desc" placeholder="Descripción" />
+        <button onclick="registrarIngreso()">Registrar</button>
+      </section>
+      <section id="egresos" style="display:none;">
+        <h2>Registrar Egreso</h2>
+        <input type="number" id="egreso-monto" placeholder="Monto" />
+        <input type="text" id="egreso-desc" placeholder="Motivo" />
+        <button onclick="registrarEgreso()">Registrar</button>
+      </section>
+      <section id="facturas" style="display:none;">
+        <h2>Facturas (Próximamente)</h2>
+      </section>
+    </main>
+  </div>
 </body>
 </html>
