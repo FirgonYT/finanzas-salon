@@ -3,106 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <title>Login - Finanzas Salón</title>
-  <style>
-    body { font-family: Arial, sans-serif; background: #f0f0f0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    #login-box {
-      background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px #aaa; width: 300px;
-    }
-    label {
-      font-weight: bold;
-      display: block;
-      margin-top: 15px;
-    }
-    input {
-      width: 100%; padding: 10px; margin: 5px 0 10px; box-sizing: border-box; border-radius: 4px; border: 1px solid #ccc;
-    }
-    button {
-      width: 100%; padding: 10px; background: #d43939; color: white; border: none; border-radius: 4px; cursor: pointer;
-      font-size: 16px;
-    }
-    button:hover:not(:disabled) { background: #b22b2b; }
-    button:disabled {
-      background: #999;
-      cursor: not-allowed;
-    }
-  </style>
+  <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
   <div id="login-box">
     <h2>Iniciar sesión</h2>
-
-    <label for="email">Correo electrónico</label>
-    <input type="email" id="email" placeholder="correo@ejemplo.com" />
-
-    <label for="password">Contraseña</label>
+    <input type="email" id="email" placeholder="Correo electrónico" />
     <input type="password" id="password" placeholder="Contraseña" />
-
-    <button id="login-btn" onclick="login()">Entrar</button>
+    <button id="btn-login">Entrar</button>
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import { login } from './js/auth.js';
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
-      authDomain: "finanzas-salon.firebaseapp.com",
-      projectId: "finanzas-salon",
-      storageBucket: "finanzas-salon.firebasestorage.app",
-      messagingSenderId: "550307448425",
-      appId: "1:550307448425:web:dd755a9ad2a22e009044f8",
-      measurementId: "G-MXET3PGMF8"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    function traducirError(code) {
-      switch (code) {
-        case "auth/user-not-found":
-          return "Usuario no encontrado.";
-        case "auth/wrong-password":
-          return "Contraseña incorrecta.";
-        case "auth/invalid-email":
-          return "Correo inválido.";
-        case "auth/too-many-requests":
-          return "Demasiados intentos fallidos. Intenta más tarde.";
-        default:
-          return "Error al iniciar sesión.";
-      }
-    }
-
-    async function login() {
-      const emailInput = document.getElementById("email");
-      const passInput = document.getElementById("password");
-      const btn = document.getElementById("login-btn");
-
-      const email = emailInput.value.trim();
-      const password = passInput.value.trim();
-
-      if (!email || !password) {
-        alert("Por favor, escribe correo y contraseña.");
-        return;
-      }
-
+    document.getElementById("btn-login").addEventListener("click", async () => {
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
       try {
-        btn.disabled = true;
-        btn.textContent = "Cargando...";
-
-        // Mantener sesión activa localmente
-        await setPersistence(auth, browserLocalPersistence);
-        await signInWithEmailAndPassword(auth, email, password);
-
+        await login(email, password);
         window.location.href = "dashboard.html";
       } catch (e) {
-        alert(traducirError(e.code));
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Entrar";
+        alert("Error en login: " + e.message);
       }
-    }
-
-    window.login = login;
+    });
   </script>
 </body>
 </html>
