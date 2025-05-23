@@ -2,43 +2,225 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Panel de Finanzas</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-  <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-  <script src="script.js" defer></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard - Finanzas Salón</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      height: 100vh;
+      background: #f0f0f0;
+    }
+    nav {
+      width: 220px;
+      background: #c0392b; /* rojo caramelo */
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding-top: 20px;
+      box-sizing: border-box;
+    }
+    nav button {
+      background: transparent;
+      border: none;
+      color: white;
+      padding: 15px 20px;
+      text-align: left;
+      font-size: 16px;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.3s;
+    }
+    nav button:hover {
+      background: #992d22;
+    }
+    nav button.active {
+      background: #7f241a;
+      font-weight: bold;
+    }
+    main {
+      flex: 1;
+      padding: 25px;
+      background: white;
+      overflow-y: auto;
+      box-sizing: border-box;
+    }
+    section {
+      display: none;
+    }
+    section.active {
+      display: block;
+    }
+    h2 {
+      color: #c0392b;
+      margin-top: 0;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 8px 0 16px 0;
+      box-sizing: border-box;
+      font-size: 15px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      resize: vertical;
+    }
+    button.submit-btn {
+      background: #c0392b;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.3s;
+    }
+    button.submit-btn:hover {
+      background: #992d22;
+    }
+    .logout-btn {
+      margin-top: auto;
+      margin-bottom: 20px;
+      background: #7f241a;
+      font-weight: bold;
+    }
+  </style>
 </head>
 <body>
-  <div class="dashboard-container">
-    <nav class="sidebar">
-      <h2>💰 Finanzas</h2>
-      <button onclick="mostrar('inicio')"><i class="fas fa-home"></i> Inicio</button>
-      <button onclick="mostrar('ingresos')"><i class="fas fa-arrow-down"></i> Ingresos</button>
-      <button onclick="mostrar('egresos')"><i class="fas fa-arrow-up"></i> Egresos</button>
-      <button onclick="mostrar('facturas')"><i class="fas fa-file-invoice"></i> Facturas</button>
-      <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> Salir</button>
-    </nav>
-    <main class="contenido">
-      <section id="inicio">Bienvenido al panel de finanzas.</section>
-      <section id="ingresos" style="display:none;">
-        <h2>Registrar Ingreso</h2>
-        <input type="number" id="ingreso-monto" placeholder="Monto" />
-        <input type="text" id="ingreso-desc" placeholder="Descripción" />
-        <button onclick="registrarIngreso()">Registrar</button>
-      </section>
-      <section id="egresos" style="display:none;">
-        <h2>Registrar Egreso</h2>
-        <input type="number" id="egreso-monto" placeholder="Monto" />
-        <input type="text" id="egreso-desc" placeholder="Motivo" />
-        <button onclick="registrarEgreso()">Registrar</button>
-      </section>
-      <section id="facturas" style="display:none;">
-        <h2>Facturas (Próximamente)</h2>
-      </section>
-    </main>
-  </div>
+
+<nav>
+  <button class="active" onclick="mostrar('ingresos', this)"><i class="fas fa-arrow-down"></i> Ingresos</button>
+  <button onclick="mostrar('egresos', this)"><i class="fas fa-arrow-up"></i> Egresos</button>
+  <button onclick="mostrar('facturas', this)"><i class="fas fa-file-invoice"></i> Facturas</button>
+  <button onclick="mostrar('estudiantes', this)"><i class="fas fa-user-graduate"></i> Estudiantes</button>
+  <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Salir</button>
+</nav>
+
+<main>
+  <section id="ingresos" class="active">
+    <h2>Registrar Ingreso</h2>
+    <input type="number" id="ingreso-monto" placeholder="Monto ($)" />
+    <textarea id="ingreso-desc" placeholder="Descripción del ingreso"></textarea>
+    <button class="submit-btn" onclick="registrarIngreso()">Guardar Ingreso</button>
+  </section>
+
+  <section id="egresos">
+    <h2>Registrar Egreso</h2>
+    <input type="number" id="egreso-monto" placeholder="Monto ($)" />
+    <textarea id="egreso-desc" placeholder="Motivo del egreso"></textarea>
+    <button class="submit-btn" onclick="registrarEgreso()">Guardar Egreso</button>
+  </section>
+
+  <section id="facturas">
+    <h2>Facturas</h2>
+    <p>Aquí podrás generar y ver facturas (pendiente de implementar).</p>
+  </section>
+
+  <section id="estudiantes">
+    <h2>Estudiantes</h2>
+    <p>Sección para agregar y ver estudiantes con sus pagos (pendiente de implementar).</p>
+  </section>
+</main>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
+    authDomain: "finanzas-salon.firebaseapp.com",
+    projectId: "finanzas-salon",
+    storageBucket: "finanzas-salon.firebasestorage.app",
+    messagingSenderId: "550307448425",
+    appId: "1:550307448425:web:dd755a9ad2a22e009044f8",
+    measurementId: "G-MXET3PGMF8"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+
+  // Verificar sesión activa
+  onAuthStateChanged(auth, (user) => {
+    if (!user) {
+      window.location.href = "index.html";
+    }
+  });
+
+  // Mostrar sección y resaltar botón activo
+  window.mostrar = function(id, btn) {
+    // Ocultar todas las secciones
+    document.querySelectorAll("main section").forEach(sec => sec.classList.remove("active"));
+    // Mostrar la sección seleccionada
+    const seccion = document.getElementById(id);
+    if (seccion) seccion.classList.add("active");
+
+    // Quitar active de todos los botones
+    document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
+    if (btn) btn.classList.add("active");
+  };
+
+  // Cerrar sesión
+  window.logout = function() {
+    signOut(auth).then(() => {
+      window.location.href = "index.html";
+    });
+  };
+
+  // Registrar ingreso
+  window.registrarIngreso = async function() {
+    const monto = document.getElementById('ingreso-monto').value;
+    const descripcion = document.getElementById('ingreso-desc').value;
+
+    if (!monto || !descripcion) {
+      alert("Completa todos los campos para el ingreso");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "ingresos"), {
+        fecha: new Date().toLocaleDateString(),
+        monto: parseFloat(monto),
+        descripcion: descripcion
+      });
+      alert("Ingreso registrado");
+      document.getElementById('ingreso-monto').value = "";
+      document.getElementById('ingreso-desc').value = "";
+    } catch (e) {
+      alert("Error guardando ingreso: " + e.message);
+    }
+  };
+
+  // Registrar egreso
+  window.registrarEgreso = async function() {
+    const monto = document.getElementById('egreso-monto').value;
+    const motivo = document.getElementById('egreso-desc').value;
+
+    if (!monto || !motivo) {
+      alert("Completa todos los campos para el egreso");
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, "egresos"), {
+        fecha: new Date().toLocaleDateString(),
+        monto: parseFloat(monto),
+        motivo: motivo
+      });
+      alert("Egreso registrado");
+      document.getElementById('egreso-monto').value = "";
+      document.getElementById('egreso-desc').value = "";
+    } catch (e) {
+      alert("Error guardando egreso: " + e.message);
+    }
+  };
+</script>
+
 </body>
 </html>
