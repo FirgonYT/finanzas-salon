@@ -2,21 +2,15 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Finanzas Salón - Dashboard</title>
+  <title>Dashboard - Finanzas Salón</title>
   <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      display: flex;
-      height: 100vh;
-      background: #fff;
-    }
-    /* Barra lateral roja caramelo */
+    body { margin: 0; font-family: Arial, sans-serif; }
     #sidebar {
-      width: 220px;
-      background: #b31b1b; /* rojo caramelo */
-      color: white;
+      background-color: #d43939;
+      width: 200px;
+      height: 100vh;
+      position: fixed;
+      top: 0; left: 0;
       display: flex;
       flex-direction: column;
       padding-top: 20px;
@@ -25,100 +19,56 @@
       background: transparent;
       border: none;
       color: white;
-      font-size: 18px;
-      padding: 15px 20px;
+      padding: 15px;
       text-align: left;
+      font-size: 16px;
       cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
       border-left: 5px solid transparent;
-      transition: border-left 0.3s;
+      transition: 0.3s;
     }
     #sidebar button:hover, #sidebar button.active {
-      border-left: 5px solid #ff6f61;
-      background: #800000;
+      background-color: #b22b2b;
+      border-left: 5px solid #ff726f;
     }
-    #sidebar button svg {
-      fill: white;
-      width: 20px;
-      height: 20px;
-    }
-    /* Contenedor principal */
     #main-content {
-      flex: 1;
+      margin-left: 200px;
       padding: 20px;
-      overflow-y: auto;
     }
-    section {
-      display: none;
-    }
-    section.active {
-      display: block;
-    }
-    h2 {
-      margin-top: 0;
-      color: #b31b1b;
-    }
-    input, textarea, select {
+    section { display: none; }
+    section.active { display: block; }
+    table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+    table, th, td { border: 1px solid #ccc; }
+    th, td { padding: 10px; text-align: left; }
+    input, select, textarea {
       padding: 8px;
-      margin: 6px 0 15px 0;
+      margin: 6px 0;
       width: 100%;
       box-sizing: border-box;
-      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
     }
     button.submit-btn {
-      background: #b31b1b;
-      color: white;
+      background-color: #d43939;
       border: none;
-      padding: 10px 20px;
+      color: white;
+      padding: 10px 15px;
       cursor: pointer;
-      font-size: 16px;
+      border-radius: 4px;
+      margin-top: 10px;
     }
     button.submit-btn:hover {
-      background: #800000;
+      background-color: #b22b2b;
     }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 15px;
-    }
-    table, th, td {
-      border: 1px solid #ddd;
-    }
-    th, td {
-      padding: 8px;
-      text-align: left;
-    }
-    th {
-      background-color: #b31b1b;
-      color: white;
-    }
+    .status-pagado { color: green; font-weight: bold; }
+    .status-no-pagado { color: red; font-weight: bold; }
   </style>
 </head>
 <body>
-
   <div id="sidebar">
-    <button class="active" onclick="showSection('estudiantes')">
-      <!-- Icono persona -->
-      <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
-      Estudiantes
-    </button>
-    <button onclick="showSection('ingresos')">
-      <!-- Icono ingresos -->
-      <svg viewBox="0 0 24 24"><path d="M12 21l-8-8h6V3h4v10h6z"/></svg>
-      Ingresos
-    </button>
-    <button onclick="showSection('egresos')">
-      <!-- Icono egresos -->
-      <svg viewBox="0 0 24 24"><path d="M12 3l8 8h-6v10h-4V11H4z"/></svg>
-      Egresos
-    </button>
-    <button onclick="logout()">
-      <!-- Icono logout -->
-      <svg viewBox="0 0 24 24"><path d="M16 13v-2H7V7l-5 5 5 5v-4zM19 3h-7v2h7v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
-      Salir
-    </button>
+    <button class="active" onclick="showSection('estudiantes')">Estudiantes</button>
+    <button onclick="showSection('ingresos')">Ingresos</button>
+    <button onclick="showSection('egresos')">Egresos</button>
+    <button onclick="logout()">Salir</button>
   </div>
 
   <div id="main-content">
@@ -126,24 +76,19 @@
     <section id="estudiantes" class="active">
       <h2>Agregar Estudiante</h2>
       <input type="text" id="estudiante-nombre" placeholder="Nombre completo" />
-      <input type="email" id="estudiante-email" placeholder="Correo electrónico (opcional)" />
       <button class="submit-btn" onclick="agregarEstudiante()">Añadir Estudiante</button>
 
-      <h3>Lista de Estudiantes</h3>
+      <h3>Lista de Estudiantes (Estado pago mes actual)</h3>
       <table id="tabla-estudiantes">
-        <thead>
-          <tr><th>Nombre</th><th>Correo</th></tr>
-        </thead>
-        <tbody>
-          <!-- Aquí se agregan los estudiantes -->
-        </tbody>
+        <thead><tr><th>Nombre</th><th>Estado</th></tr></thead>
+        <tbody></tbody>
       </table>
     </section>
 
     <!-- Ingresos -->
     <section id="ingresos">
       <h2>Registrar Ingreso</h2>
-      <input type="number" id="ingreso-monto" placeholder="Monto en COP" min="0" />
+      <input type="number" id="ingreso-monto" placeholder="Monto (COP)" />
       <input type="text" id="ingreso-desc" placeholder="Descripción" />
       <button class="submit-btn" onclick="registrarIngreso()">Registrar Ingreso</button>
     </section>
@@ -151,17 +96,16 @@
     <!-- Egresos -->
     <section id="egresos">
       <h2>Registrar Egreso</h2>
-      <input type="number" id="egreso-monto" placeholder="Monto en COP" min="0" />
-      <input type="text" id="egreso-desc" placeholder="Motivo del egreso" />
+      <input type="number" id="egreso-monto" placeholder="Monto (COP)" />
+      <input type="text" id="egreso-desc" placeholder="Motivo" />
       <button class="submit-btn" onclick="registrarEgreso()">Registrar Egreso</button>
     </section>
   </div>
 
-  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
@@ -177,136 +121,129 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // Control de navegación entre secciones
-    function showSection(seccionId) {
-      document.querySelectorAll("section").forEach(sec => {
-        sec.classList.remove("active");
-      });
-      document.getElementById(seccionId).classList.add("active");
-      // Cambiar botón activo
-      document.querySelectorAll("#sidebar button").forEach(btn => {
-        btn.classList.remove("active");
-      });
-      event.currentTarget.classList.add("active");
+    // Mostrar y ocultar secciones
+    function showSection(id) {
+      document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active"));
+      document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`).classList.add("active");
     }
     window.showSection = showSection;
 
     // Logout
     function logout() {
-      signOut(auth).then(() => {
-        window.location.href = "index.html";
-      });
+      signOut(auth).then(() => window.location.href = "index.html");
     }
     window.logout = logout;
 
-    // Añadir estudiante
+    // Agregar estudiante
     async function agregarEstudiante() {
       const nombre = document.getElementById("estudiante-nombre").value.trim();
-      const email = document.getElementById("estudiante-email").value.trim();
-
       if (!nombre) {
-        alert("El nombre del estudiante es obligatorio.");
+        alert("Por favor, escribe el nombre del estudiante.");
         return;
       }
-
       try {
         await addDoc(collection(db, "estudiantes"), {
           nombre,
-          email,
           creadoEn: new Date()
         });
         alert("Estudiante agregado.");
         document.getElementById("estudiante-nombre").value = "";
-        document.getElementById("estudiante-email").value = "";
         cargarEstudiantes();
-      } catch (error) {
-        alert("Error al agregar estudiante: " + error.message);
+      } catch (e) {
+        alert("Error agregando estudiante: " + e.message);
       }
     }
     window.agregarEstudiante = agregarEstudiante;
 
-    // Cargar estudiantes y mostrarlos en la tabla
+    // Cargar estudiantes y mostrar su estado (si pagó o no el mes actual)
     async function cargarEstudiantes() {
-      const tabla = document.getElementById("tabla-estudiantes").querySelector("tbody");
-      tabla.innerHTML = "";
+      const tbody = document.querySelector("#tabla-estudiantes tbody");
+      tbody.innerHTML = "";
+
+      // Obtener mes actual en formato YYYY-MM
+      const hoy = new Date();
+      const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+
       try {
-        const querySnapshot = await getDocs(collection(db, "estudiantes"));
-        querySnapshot.forEach(doc => {
-          const data = doc.data();
+        const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
+        for (const estudianteDoc of estudiantesSnapshot.docs) {
+          const estudianteData = estudianteDoc.data();
+
+          // Consultar si hay pago de ese estudiante para el mes actual
+          const pagosQuery = query(collection(db, "pagos"),
+            where("idEstudiante", "==", estudianteDoc.id),
+            where("mes", "==", mesActual)
+          );
+          const pagosSnapshot = await getDocs(pagosQuery);
+
+          const pagado = pagosSnapshot.size > 0;
+
+          // Crear fila con nombre y estado
           const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${data.nombre}</td><td>${data.email || '-'}</td>`;
-          tabla.appendChild(tr);
-        });
-      } catch (error) {
-        alert("Error al cargar estudiantes: " + error.message);
+          tr.innerHTML = `
+            <td>${estudianteData.nombre}</td>
+            <td class="${pagado ? 'status-pagado' : 'status-no-pagado'}">
+              ${pagado ? "Al día" : "No al día"}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+      } catch (e) {
+        alert("Error cargando estudiantes: " + e.message);
       }
     }
 
-    // Registrar ingreso
+    // Registrar ingreso (pagos o ingresos)
     async function registrarIngreso() {
-      const montoInput = document.getElementById("ingreso-monto");
-      const descInput = document.getElementById("ingreso-desc");
-
-      const monto = parseFloat(montoInput.value);
-      const descripcion = descInput.value.trim();
-
-      if (isNaN(monto) || monto <= 0) {
-        alert("Ingrese un monto válido mayor que cero.");
-        return;
-      }
-      if (!descripcion) {
-        alert("Ingrese una descripción.");
+      const monto = Number(document.getElementById("ingreso-monto").value);
+      const desc = document.getElementById("ingreso-desc").value.trim();
+      if (!monto || monto <= 0 || !desc) {
+        alert("Por favor, escribe un monto válido y descripción.");
         return;
       }
 
       try {
         await addDoc(collection(db, "ingresos"), {
-          fecha: new Date().toISOString(),
           monto,
-          descripcion
+          descripcion: desc,
+          creadoEn: new Date()
         });
         alert("Ingreso registrado.");
-        montoInput.value = "";
-        descInput.value = "";
-      } catch (error) {
-        alert("Error al registrar ingreso: " + error.message);
+        document.getElementById("ingreso-monto").value = "";
+        document.getElementById("ingreso-desc").value = "";
+      } catch (e) {
+        alert("Error registrando ingreso: " + e.message);
       }
     }
     window.registrarIngreso = registrarIngreso;
 
     // Registrar egreso
     async function registrarEgreso() {
-      const montoInput = document.getElementById("egreso-monto");
-      const descInput = document.getElementById("egreso-desc");
-
-      const monto = parseFloat(montoInput.value);
-      const motivo = descInput.value.trim();
-
-      if (isNaN(monto) || monto <= 0) {
-        alert("Ingrese un monto válido mayor que cero.");
-        return;
-      }
-      if (!motivo) {
-        alert("Ingrese el motivo del egreso.");
+      const monto = Number(document.getElementById("egreso-monto").value);
+      const desc = document.getElementById("egreso-desc").value.trim();
+      if (!monto || monto <= 0 || !desc) {
+        alert("Por favor, escribe un monto válido y motivo.");
         return;
       }
 
       try {
         await addDoc(collection(db, "egresos"), {
-          fecha: new Date().toISOString(),
           monto,
-          motivo
+          motivo: desc,
+          creadoEn: new Date()
         });
         alert("Egreso registrado.");
-        montoInput.value = "";
-        descInput.value = "";
-      } catch (error) {
-        alert("Error al registrar egreso: " + error.message);
+        document.getElementById("egreso-monto").value = "";
+        document.getElementById("egreso-desc").value = "";
+      } catch (e) {
+        alert("Error registrando egreso: " + e.message);
       }
     }
     window.registrarEgreso = registrarEgreso;
 
-    // Verificar usuario logueado, si no, redirigir a login (index.html)
+    // Verificar usuario logueado
     onAuthStateChanged(auth, user => {
       if (!user) {
         window.location.href = "index.html";
