@@ -3,52 +3,52 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dashboard - Finanzas Salón</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <title>Finanzas Salón - Dashboard</title>
   <style>
     body {
       margin: 0;
       font-family: Arial, sans-serif;
       display: flex;
       height: 100vh;
-      background: #f0f0f0;
+      background: #fff;
     }
-    nav {
+    /* Barra lateral roja caramelo */
+    #sidebar {
       width: 220px;
-      background: #c0392b; /* rojo caramelo */
+      background: #b31b1b; /* rojo caramelo */
       color: white;
       display: flex;
       flex-direction: column;
       padding-top: 20px;
-      box-sizing: border-box;
     }
-    nav button {
+    #sidebar button {
       background: transparent;
       border: none;
       color: white;
+      font-size: 18px;
       padding: 15px 20px;
       text-align: left;
-      font-size: 16px;
       cursor: pointer;
-      width: 100%;
       display: flex;
       align-items: center;
       gap: 10px;
-      transition: background 0.3s;
+      border-left: 5px solid transparent;
+      transition: border-left 0.3s;
     }
-    nav button:hover {
-      background: #992d22;
+    #sidebar button:hover, #sidebar button.active {
+      border-left: 5px solid #ff6f61;
+      background: #800000;
     }
-    nav button.active {
-      background: #7f241a;
-      font-weight: bold;
+    #sidebar button svg {
+      fill: white;
+      width: 20px;
+      height: 20px;
     }
-    main {
+    /* Contenedor principal */
+    #main-content {
       flex: 1;
-      padding: 25px;
-      background: white;
+      padding: 20px;
       overflow-y: auto;
-      box-sizing: border-box;
     }
     section {
       display: none;
@@ -57,170 +57,263 @@
       display: block;
     }
     h2 {
-      color: #c0392b;
       margin-top: 0;
+      color: #b31b1b;
     }
-    input, textarea {
+    input, textarea, select {
+      padding: 8px;
+      margin: 6px 0 15px 0;
       width: 100%;
-      padding: 10px;
-      margin: 8px 0 16px 0;
       box-sizing: border-box;
-      font-size: 15px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      resize: vertical;
+      font-size: 16px;
     }
     button.submit-btn {
-      background: #c0392b;
+      background: #b31b1b;
       color: white;
       border: none;
-      padding: 12px 20px;
-      font-weight: bold;
+      padding: 10px 20px;
       cursor: pointer;
-      border-radius: 4px;
-      transition: background 0.3s;
+      font-size: 16px;
     }
     button.submit-btn:hover {
-      background: #992d22;
+      background: #800000;
     }
-    .logout-btn {
-      margin-top: auto;
-      margin-bottom: 20px;
-      background: #7f241a;
-      font-weight: bold;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #b31b1b;
+      color: white;
     }
   </style>
 </head>
 <body>
 
-<nav>
-  <button class="active" onclick="mostrar('ingresos', this)"><i class="fas fa-arrow-down"></i> Ingresos</button>
-  <button onclick="mostrar('egresos', this)"><i class="fas fa-arrow-up"></i> Egresos</button>
-  <button onclick="mostrar('facturas', this)"><i class="fas fa-file-invoice"></i> Facturas</button>
-  <button onclick="mostrar('estudiantes', this)"><i class="fas fa-user-graduate"></i> Estudiantes</button>
-  <button class="logout-btn" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Salir</button>
-</nav>
+  <div id="sidebar">
+    <button class="active" onclick="showSection('estudiantes')">
+      <!-- Icono persona -->
+      <svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"/></svg>
+      Estudiantes
+    </button>
+    <button onclick="showSection('ingresos')">
+      <!-- Icono ingresos -->
+      <svg viewBox="0 0 24 24"><path d="M12 21l-8-8h6V3h4v10h6z"/></svg>
+      Ingresos
+    </button>
+    <button onclick="showSection('egresos')">
+      <!-- Icono egresos -->
+      <svg viewBox="0 0 24 24"><path d="M12 3l8 8h-6v10h-4V11H4z"/></svg>
+      Egresos
+    </button>
+    <button onclick="logout()">
+      <!-- Icono logout -->
+      <svg viewBox="0 0 24 24"><path d="M16 13v-2H7V7l-5 5 5 5v-4zM19 3h-7v2h7v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg>
+      Salir
+    </button>
+  </div>
 
-<main>
-  <section id="ingresos" class="active">
-    <h2>Registrar Ingreso</h2>
-    <input type="number" id="ingreso-monto" placeholder="Monto ($)" />
-    <textarea id="ingreso-desc" placeholder="Descripción del ingreso"></textarea>
-    <button class="submit-btn" onclick="registrarIngreso()">Guardar Ingreso</button>
-  </section>
+  <div id="main-content">
+    <!-- Estudiantes -->
+    <section id="estudiantes" class="active">
+      <h2>Agregar Estudiante</h2>
+      <input type="text" id="estudiante-nombre" placeholder="Nombre completo" />
+      <input type="email" id="estudiante-email" placeholder="Correo electrónico (opcional)" />
+      <button class="submit-btn" onclick="agregarEstudiante()">Añadir Estudiante</button>
 
-  <section id="egresos">
-    <h2>Registrar Egreso</h2>
-    <input type="number" id="egreso-monto" placeholder="Monto ($)" />
-    <textarea id="egreso-desc" placeholder="Motivo del egreso"></textarea>
-    <button class="submit-btn" onclick="registrarEgreso()">Guardar Egreso</button>
-  </section>
+      <h3>Lista de Estudiantes</h3>
+      <table id="tabla-estudiantes">
+        <thead>
+          <tr><th>Nombre</th><th>Correo</th></tr>
+        </thead>
+        <tbody>
+          <!-- Aquí se agregan los estudiantes -->
+        </tbody>
+      </table>
+    </section>
 
-  <section id="facturas">
-    <h2>Facturas</h2>
-    <p>Aquí podrás generar y ver facturas (pendiente de implementar).</p>
-  </section>
+    <!-- Ingresos -->
+    <section id="ingresos">
+      <h2>Registrar Ingreso</h2>
+      <input type="number" id="ingreso-monto" placeholder="Monto en COP" min="0" />
+      <input type="text" id="ingreso-desc" placeholder="Descripción" />
+      <button class="submit-btn" onclick="registrarIngreso()">Registrar Ingreso</button>
+    </section>
 
-  <section id="estudiantes">
-    <h2>Estudiantes</h2>
-    <p>Sección para agregar y ver estudiantes con sus pagos (pendiente de implementar).</p>
-  </section>
-</main>
+    <!-- Egresos -->
+    <section id="egresos">
+      <h2>Registrar Egreso</h2>
+      <input type="number" id="egreso-monto" placeholder="Monto en COP" min="0" />
+      <input type="text" id="egreso-desc" placeholder="Motivo del egreso" />
+      <button class="submit-btn" onclick="registrarEgreso()">Registrar Egreso</button>
+    </section>
+  </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-  import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
-    authDomain: "finanzas-salon.firebaseapp.com",
-    projectId: "finanzas-salon",
-    storageBucket: "finanzas-salon.firebasestorage.app",
-    messagingSenderId: "550307448425",
-    appId: "1:550307448425:web:dd755a9ad2a22e009044f8",
-    measurementId: "G-MXET3PGMF8"
-  };
+    const firebaseConfig = {
+      apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
+      authDomain: "finanzas-salon.firebaseapp.com",
+      projectId: "finanzas-salon",
+      storageBucket: "finanzas-salon.firebasestorage.app",
+      messagingSenderId: "550307448425",
+      appId: "1:550307448425:web:dd755a9ad2a22e009044f8",
+      measurementId: "G-MXET3PGMF8"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-  // Verificar sesión activa
-  onAuthStateChanged(auth, (user) => {
-    if (!user) {
-      window.location.href = "index.html";
+    // Control de navegación entre secciones
+    function showSection(seccionId) {
+      document.querySelectorAll("section").forEach(sec => {
+        sec.classList.remove("active");
+      });
+      document.getElementById(seccionId).classList.add("active");
+      // Cambiar botón activo
+      document.querySelectorAll("#sidebar button").forEach(btn => {
+        btn.classList.remove("active");
+      });
+      event.currentTarget.classList.add("active");
     }
-  });
+    window.showSection = showSection;
 
-  // Mostrar sección y resaltar botón activo
-  window.mostrar = function(id, btn) {
-    // Ocultar todas las secciones
-    document.querySelectorAll("main section").forEach(sec => sec.classList.remove("active"));
-    // Mostrar la sección seleccionada
-    const seccion = document.getElementById(id);
-    if (seccion) seccion.classList.add("active");
+    // Logout
+    function logout() {
+      signOut(auth).then(() => {
+        window.location.href = "index.html";
+      });
+    }
+    window.logout = logout;
 
-    // Quitar active de todos los botones
-    document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
-    if (btn) btn.classList.add("active");
-  };
+    // Añadir estudiante
+    async function agregarEstudiante() {
+      const nombre = document.getElementById("estudiante-nombre").value.trim();
+      const email = document.getElementById("estudiante-email").value.trim();
 
-  // Cerrar sesión
-  window.logout = function() {
-    signOut(auth).then(() => {
-      window.location.href = "index.html";
+      if (!nombre) {
+        alert("El nombre del estudiante es obligatorio.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "estudiantes"), {
+          nombre,
+          email,
+          creadoEn: new Date()
+        });
+        alert("Estudiante agregado.");
+        document.getElementById("estudiante-nombre").value = "";
+        document.getElementById("estudiante-email").value = "";
+        cargarEstudiantes();
+      } catch (error) {
+        alert("Error al agregar estudiante: " + error.message);
+      }
+    }
+    window.agregarEstudiante = agregarEstudiante;
+
+    // Cargar estudiantes y mostrarlos en la tabla
+    async function cargarEstudiantes() {
+      const tabla = document.getElementById("tabla-estudiantes").querySelector("tbody");
+      tabla.innerHTML = "";
+      try {
+        const querySnapshot = await getDocs(collection(db, "estudiantes"));
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${data.nombre}</td><td>${data.email || '-'}</td>`;
+          tabla.appendChild(tr);
+        });
+      } catch (error) {
+        alert("Error al cargar estudiantes: " + error.message);
+      }
+    }
+
+    // Registrar ingreso
+    async function registrarIngreso() {
+      const montoInput = document.getElementById("ingreso-monto");
+      const descInput = document.getElementById("ingreso-desc");
+
+      const monto = parseFloat(montoInput.value);
+      const descripcion = descInput.value.trim();
+
+      if (isNaN(monto) || monto <= 0) {
+        alert("Ingrese un monto válido mayor que cero.");
+        return;
+      }
+      if (!descripcion) {
+        alert("Ingrese una descripción.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "ingresos"), {
+          fecha: new Date().toISOString(),
+          monto,
+          descripcion
+        });
+        alert("Ingreso registrado.");
+        montoInput.value = "";
+        descInput.value = "";
+      } catch (error) {
+        alert("Error al registrar ingreso: " + error.message);
+      }
+    }
+    window.registrarIngreso = registrarIngreso;
+
+    // Registrar egreso
+    async function registrarEgreso() {
+      const montoInput = document.getElementById("egreso-monto");
+      const descInput = document.getElementById("egreso-desc");
+
+      const monto = parseFloat(montoInput.value);
+      const motivo = descInput.value.trim();
+
+      if (isNaN(monto) || monto <= 0) {
+        alert("Ingrese un monto válido mayor que cero.");
+        return;
+      }
+      if (!motivo) {
+        alert("Ingrese el motivo del egreso.");
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "egresos"), {
+          fecha: new Date().toISOString(),
+          monto,
+          motivo
+        });
+        alert("Egreso registrado.");
+        montoInput.value = "";
+        descInput.value = "";
+      } catch (error) {
+        alert("Error al registrar egreso: " + error.message);
+      }
+    }
+    window.registrarEgreso = registrarEgreso;
+
+    // Verificar usuario logueado, si no, redirigir a login (index.html)
+    onAuthStateChanged(auth, user => {
+      if (!user) {
+        window.location.href = "index.html";
+      } else {
+        cargarEstudiantes();
+      }
     });
-  };
-
-  // Registrar ingreso
-  window.registrarIngreso = async function() {
-    const monto = document.getElementById('ingreso-monto').value;
-    const descripcion = document.getElementById('ingreso-desc').value;
-
-    if (!monto || !descripcion) {
-      alert("Completa todos los campos para el ingreso");
-      return;
-    }
-
-    try {
-      await addDoc(collection(db, "ingresos"), {
-        fecha: new Date().toLocaleDateString(),
-        monto: parseFloat(monto),
-        descripcion: descripcion
-      });
-      alert("Ingreso registrado");
-      document.getElementById('ingreso-monto').value = "";
-      document.getElementById('ingreso-desc').value = "";
-    } catch (e) {
-      alert("Error guardando ingreso: " + e.message);
-    }
-  };
-
-  // Registrar egreso
-  window.registrarEgreso = async function() {
-    const monto = document.getElementById('egreso-monto').value;
-    const motivo = document.getElementById('egreso-desc').value;
-
-    if (!monto || !motivo) {
-      alert("Completa todos los campos para el egreso");
-      return;
-    }
-
-    try {
-      await addDoc(collection(db, "egresos"), {
-        fecha: new Date().toLocaleDateString(),
-        monto: parseFloat(monto),
-        motivo: motivo
-      });
-      alert("Egreso registrado");
-      document.getElementById('egreso-monto').value = "";
-      document.getElementById('egreso-desc').value = "";
-    } catch (e) {
-      alert("Error guardando egreso: " + e.message);
-    }
-  };
-</script>
-
+  </script>
 </body>
 </html>
