@@ -9,11 +9,12 @@ const firebaseConfig = {
   measurementId: "G-MXET3PGMF8"
 };
 
+// Inicializar Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// LOGIN
+// 🔐 LOGIN
 function login() {
   const email = document.getElementById('email').value;
   const password = document.getElementById('password').value;
@@ -22,36 +23,66 @@ function login() {
     .catch(error => alert("Error: " + error.message));
 }
 
-// LOGOUT
+// 🚪 LOGOUT
 function logout() {
   auth.signOut().then(() => window.location.href = "index.html");
 }
 
-// REGISTRAR INGRESO
+// ➕ REGISTRAR INGRESO
 function registrarIngreso() {
   const monto = document.getElementById('ingreso-monto').value;
   const descripcion = document.getElementById('ingreso-desc').value;
+
+  if (!monto || !descripcion) {
+    alert("Por favor completa todos los campos de ingreso.");
+    return;
+  }
+
   db.collection("ingresos").add({
     fecha: new Date().toLocaleDateString(),
     monto: parseFloat(monto),
     descripcion: descripcion
-  }).then(() => alert("Ingreso registrado"));
+  }).then(() => {
+    alert("Ingreso registrado");
+    document.getElementById('ingreso-monto').value = '';
+    document.getElementById('ingreso-desc').value = '';
+  });
 }
 
-// REGISTRAR EGRESO
+// ➖ REGISTRAR EGRESO
 function registrarEgreso() {
   const monto = document.getElementById('egreso-monto').value;
   const motivo = document.getElementById('egreso-desc').value;
+
+  if (!monto || !motivo) {
+    alert("Por favor completa todos los campos de egreso.");
+    return;
+  }
+
   db.collection("egresos").add({
     fecha: new Date().toLocaleDateString(),
     monto: parseFloat(monto),
     motivo: motivo
-  }).then(() => alert("Egreso registrado"));
+  }).then(() => {
+    alert("Egreso registrado");
+    document.getElementById('egreso-monto').value = '';
+    document.getElementById('egreso-desc').value = '';
+  });
 }
 
-// ✅ Verificar si hay sesión iniciada en dashboard
+// 👤 VERIFICAR SESIÓN EN DASHBOARD
 auth.onAuthStateChanged((user) => {
   if (!user && window.location.pathname.includes("dashboard.html")) {
     window.location.href = "index.html";
   }
 });
+
+// 🧭 MOSTRAR SECCIÓN ACTIVA
+function mostrar(id) {
+  const secciones = document.querySelectorAll("main section");
+  secciones.forEach(sec => sec.style.display = "none");
+  const activa = document.getElementById(id);
+  if (activa) {
+    activa.style.display = "block";
+  }
+}
