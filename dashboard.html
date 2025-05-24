@@ -95,6 +95,7 @@
       <button class="submit-btn" onclick="agregarEstudiante()">Añadir Estudiante</button>
 
       <h3>Lista de Estudiantes (Estado pago mes actual)</h3>
+	  <input type="text" id="busqueda-estudiante" placeholder="Buscar estudiante por nombre..." oninput="filtrarEstudiantes()" />
       <table id="tabla-estudiantes">
         <thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody></tbody>
@@ -310,6 +311,22 @@
 let estudiantesTablaCache = null;
 	
     window.cargarEstudiantes = cargarEstudiantes;
+	
+		function filtrarEstudiantes() {
+		const filtro = document.getElementById("busqueda-estudiante").value.toLowerCase();
+		const tbody = document.querySelector("#tabla-estudiantes tbody");
+
+		tbody.innerHTML = ""; // Limpia la tabla
+
+		estudiantesTablaCache.forEach(tr => {
+		  const nombre = tr.querySelector("td")?.textContent?.toLowerCase();
+		  if (nombre.includes(filtro)) {
+			tbody.appendChild(tr.cloneNode(true));
+		  }
+		});
+	  }
+
+	  window.filtrarEstudiantes = filtrarEstudiantes;
 
 
 	async function cargarSelectEstudiantes() {
