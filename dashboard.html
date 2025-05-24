@@ -192,25 +192,25 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    function showSection(id) {
-      document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active"));
-      document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-      const btn = document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`);
-      if(btn) btn.classList.add("active");
+	function showSection(id) {
+	  document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active"));
+	  document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
+	  document.getElementById(id).classList.add("active");
 
-      // Carga datos según sección
-      if(id === 'estudiantes' || id === 'pagos') {
-        cargarEstudiantes();
-        cargarSelectEstudiantes();
-      }
-      if (id === 'finanzas') {
-        cargarFinanzas();
-      }
-      if (id === 'egresos') {
-        cargarEgresos();
-      }
-    }
+	  const btn = document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`);
+	  if (btn) btn.classList.add("active");
+
+	  // Carga datos según sección
+	  if (id === 'estudiantes') {
+		cargarEstudiantes();
+	  } else if (id === 'pagos') {
+		cargarSelectEstudiantes();
+	  } else if (id === 'finanzas') {
+		cargarFinanzas();
+	  } else if (id === 'egresos') {
+		cargarEgresos();
+	  }
+	}
     window.showSection = showSection;
 
     function logout() {
@@ -231,7 +231,6 @@
         });
         alert("Estudiante agregado.");
         document.getElementById("estudiante-nombre").value = "";
-        cargarEstudiantes();
         cargarSelectEstudiantes();
       } catch (e) {
         alert("Error agregando estudiante: " + e.message);
@@ -239,76 +238,93 @@
     }
     window.agregarEstudiante = agregarEstudiante;
 
-    async function cargarEstudiantes() {
-      const tbody = document.querySelector("#tabla-estudiantes tbody");
-      tbody.innerHTML = "";
+	async function cargarEstudiantes() {
+	  console.trace("cargarEstudiantes llamada desde:");
+	  console.log("Cargando estudiantes...");
+	  const tbody = document.querySelector("#tabla-estudiantes tbody");
+	  tbody.innerHTML = "";
 
-      const hoy = new Date();
-      const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+	  const hoy = new Date();
+	  const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
 
-      try {
-        const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
-        for (const docEstudiante of estudiantesSnapshot.docs) {
-          const estudianteId = docEstudiante.id;
-          const nombre = docEstudiante.data().nombre;
+	  try {
+		const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
 
-          const pagosQuery = query(collection(db, "pagos"),
-            where("idEstudiante", "==", estudianteId),
-            where("mes", "==", mesActual)
-          );
-          const pagosSnapshot = await getDocs(pagosQuery);
+		// Convertir snapshot a array y ordenar por nombre
+		const estudiantes = estudiantesSnapshot.docs
+		  .map(doc => ({ id: doc.id, ...doc.data() }))
+		  .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' }));
 
-          let sumaPagos = 0;
-          pagosSnapshot.forEach(pagoDoc => {
-            sumaPagos += pagoDoc.data().monto;
-          });
 
-          let estadoTexto = "";
-          let estadoClase = "";
-          if (sumaPagos >= 15000) {
-            estadoTexto = "Al día";
-            estadoClase = "status-pagado";
-          } else if (sumaPagos > 0 && sumaPagos < 15000) {
-            estadoTexto = "Al día con menor pago";
-            estadoClase = "status-menor-pago";
-          } else {
-            estadoTexto = "No al día";
-            estadoClase = "status-no-pagado";
-          }
+		for (const estudiante of estudiantes) {
+		  const estudianteId = estudiante.id;
+		  const nombre = estudiante.nombre;
 
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${nombre}</td>
-            <td class="${estadoClase}">${estadoTexto}</td>
-            <td>
-              <button class="boton-ver-pagos" onclick="verPagosEstudiante('${estudianteId}', '${nombre}')">Ver pagos</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        }
-      } catch (e) {
-        alert("Error cargando estudiantes: " + e.message);
-      }
-    }
+		  const pagosQuery = query(collection(db, "pagos"),
+			where("idEstudiante", "==", estudianteId),
+			where("mes", "==", mesActual)
+		  );
+		  const pagosSnapshot = await getDocs(pagosQuery);
+
+		  let sumaPagos = 0;
+		  pagosSnapshot.forEach(pagoDoc => {
+			sumaPagos += pagoDoc.data().monto;
+		  });
+
+		  let estadoTexto = "";
+		  let estadoClase = "";
+		  if (sumaPagos >= 15000) {
+			estadoTexto = "Al día";
+			estadoClase = "status-pagado";
+		  } else if (sumaPagos > 0 && sumaPagos < 15000) {
+			estadoTexto = "Al día con menor pago";
+			estadoClase = "status-menor-pago";
+		  } else {
+			estadoTexto = "No al día";
+			estadoClase = "status-no-pagado";
+		  }
+
+		  const tr = document.createElement("tr");
+		  tr.innerHTML = `
+			<td>${nombre}</td>
+			<td class="${estadoClase}">${estadoTexto}</td>
+			<td>
+			  <button class="boton-ver-pagos" onclick="verPagosEstudiante('${estudianteId}', '${nombre}')">Ver pagos</button>
+			</td>
+		  `;
+		  tbody.appendChild(tr);
+		}
+	  } catch (e) {
+		alert("Error cargando estudiantes: " + e.message);
+	  }
+	}
+
     window.cargarEstudiantes = cargarEstudiantes;
 
-    async function cargarSelectEstudiantes() {
-      const select = document.getElementById("select-estudiante");
-      select.innerHTML = '<option value="">-- Seleccione --</option>';
-      try {
-        const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
-        estudiantesSnapshot.forEach(doc => {
-          const nombre = doc.data().nombre;
-          const id = doc.id;
-          const option = document.createElement("option");
-          option.value = id;
-          option.textContent = nombre;
-          select.appendChild(option);
-        });
-      } catch (e) {
-        alert("Error cargando estudiantes para pago: " + e.message);
-      }
-    }
+	async function cargarSelectEstudiantes() {
+	  console.log("Cargando select estudiantes...");
+	  const select = document.getElementById("select-estudiante");
+	  select.innerHTML = '<option value="">-- Seleccione --</option>';
+
+	  try {
+		const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
+
+		// Convertir snapshot a array y ordenar por nombre
+		const estudiantes = estudiantesSnapshot.docs
+		  .map(doc => ({ id: doc.id, ...doc.data() }))
+		  .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' }));
+
+		for (const estudiante of estudiantes) {
+		  const option = document.createElement("option");
+		  option.value = estudiante.id;
+		  option.textContent = estudiante.nombre;
+		  select.appendChild(option);
+		}
+	  } catch (e) {
+		alert("Error cargando estudiantes para pago: " + e.message);
+	  }
+	}
+
     window.cargarSelectEstudiantes = cargarSelectEstudiantes;
 
     async function registrarPago() {
@@ -533,7 +549,6 @@
         window.location.href = "index.html";
       } else {
         showSection("estudiantes");
-        cargarEstudiantes();
         cargarSelectEstudiantes();
         cargarFinanzas();
       }
