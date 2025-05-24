@@ -218,6 +218,7 @@
     }
     window.logout = logout;
 
+	
     async function agregarEstudiante() {
       const nombre = document.getElementById("estudiante-nombre").value.trim();
       if (!nombre) {
@@ -238,6 +239,7 @@
     }
     window.agregarEstudiante = agregarEstudiante;
 
+
 	async function cargarEstudiantes() {
 	  console.trace("cargarEstudiantes llamada desde:");
 	  console.log("Cargando estudiantes...");
@@ -247,14 +249,22 @@
 	  const hoy = new Date();
 	  const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
 
+	  // ✅ Si ya tenemos los datos cacheados, simplemente pintamos la tabla
+	  if (estudiantesTablaCache) {
+		console.log("Usando caché de estudiantes.");
+		estudiantesTablaCache.forEach(tr => tbody.appendChild(tr.cloneNode(true)));
+		return;
+	  }
+
 	  try {
 		const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
 
-		// Convertir snapshot a array y ordenar por nombre
 		const estudiantes = estudiantesSnapshot.docs
 		  .map(doc => ({ id: doc.id, ...doc.data() }))
 		  .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' }));
 
+		// Guardamos temporalmente las filas para cache
+		estudiantesTablaCache = [];
 
 		for (const estudiante of estudiantes) {
 		  const estudianteId = estudiante.id;
@@ -276,7 +286,7 @@
 		  if (sumaPagos >= 15000) {
 			estadoTexto = "Al día";
 			estadoClase = "status-pagado";
-		  } else if (sumaPagos > 0 && sumaPagos < 15000) {
+		  } else if (sumaPagos > 0) {
 			estadoTexto = "Al día con menor pago";
 			estadoClase = "status-menor-pago";
 		  } else {
@@ -293,13 +303,17 @@
 			</td>
 		  `;
 		  tbody.appendChild(tr);
+		  estudiantesTablaCache.push(tr.cloneNode(true)); // Guardamos copia
 		}
+
 	  } catch (e) {
 		alert("Error cargando estudiantes: " + e.message);
 	  }
 	}
-
+let estudiantesTablaCache = null;
+	
     window.cargarEstudiantes = cargarEstudiantes;
+
 
 	async function cargarSelectEstudiantes() {
 	  console.log("Cargando select estudiantes...");
@@ -307,45 +321,53 @@
 	  select.innerHTML = '<option value="">-- Seleccione --</option>';
 
 	  try {
-		const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
-
-		const estudiantes = estudiantesSnapshot.docs
-		  .map(doc => ({ id: doc.id, ...doc.data() }))
-		  .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' }));
-
-		for (const estudiante of estudiantes) {
-		  const option = document.createElement("option");
-		  option.value = estudiante.id;
-		  option.textContent = estudiante.nombre;
-		  select.appendChild(option);
+		if (!estudiantesTablaCache) {
+		  console.warn("estudiantesTablaCache no está cargado aún.");
+		  return; // No cargues nada si no hay datos disponibles aún
 		}
 
-		// Agregar funcionalidad de búsqueda por letra
-		let searchChar = '';
-		let searchTimeout;
-		select.addEventListener("keydown", (e) => {
-		  if (e.key.length === 1 && /[a-zA-Z0-9]/.test(e.key)) {
-			searchChar += e.key.toLowerCase();
+		// 🧠 estudiantesTablaCache contiene filas <tr>, sacamos los nombres desde ahí
+		estudiantesTablaCache.forEach(tr => {
+		  const nombre = tr.querySelector("td")?.textContent?.trim();
+		  const boton = tr.querySelector("button");
+		  const id = boton?.getAttribute("onclick")?.match(/verPagosEstudiante\('([^']+)'/)?.[1];
 
-			clearTimeout(searchTimeout);
-			searchTimeout = setTimeout(() => {
-			  searchChar = '';
-			}, 1000); // borrar búsqueda después de 1 segundo sin escribir
-
-			for (let option of select.options) {
-			  if (option.textContent.toLowerCase().startsWith(searchChar)) {
-				select.value = option.value;
-				break;
-			  }
-			}
+		  if (nombre && id) {
+			const option = document.createElement("option");
+			option.value = id;
+			option.textContent = nombre;
+			select.appendChild(option);
 		  }
 		});
+
+		// 🎹 Búsqueda por letra (una sola vez)
+		if (!select.dataset.listenerAdded) {
+		  let searchChar = '';
+		  let searchTimeout;
+		  select.addEventListener("keydown", (e) => {
+			if (e.key.length === 1 && /[a-zA-Z0-9]/.test(e.key)) {
+			  searchChar += e.key.toLowerCase();
+
+			  clearTimeout(searchTimeout);
+			  searchTimeout = setTimeout(() => {
+				searchChar = '';
+			  }, 1000);
+
+			  for (let option of select.options) {
+				if (option.textContent.toLowerCase().startsWith(searchChar)) {
+				  select.value = option.value;
+				  break;
+				}
+			  }
+			}
+		  });
+		  select.dataset.listenerAdded = "true";
+		}
 
 	  } catch (e) {
 		alert("Error cargando estudiantes para pago: " + e.message);
 	  }
 	}
-
     window.cargarSelectEstudiantes = cargarSelectEstudiantes;
 
     async function registrarPago() {
