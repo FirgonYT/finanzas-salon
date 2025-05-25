@@ -110,6 +110,20 @@
 
       <label for="pago-monto">Monto (COP):</label>
       <input type="number" id="pago-monto" placeholder="Ejemplo: 50000" />
+	  <label for="pago-fecha">Fecha y hora del pago:</label>
+	  <input type="datetime-local" id="pago-fecha" />
+	  <label for="mes-pagado">Mes que está pagando:</label>
+		<select id="mes-pagado">
+		  <option value="">Seleccione un mes</option>
+		  <option value="05">Mayo</option>
+		  <option value="06">Junio</option>
+		  <option value="07">Julio</option>
+		  <option value="08">Agosto</option>
+		  <option value="09">Septiembre</option>
+		  <option value="10">Octubre</option>
+		  <option value="11">Noviembre</option>
+		</select>
+
 
       <button class="submit-btn" onclick="registrarPago()">Registrar Pago</button>
     </section>
@@ -119,26 +133,27 @@
       <h2>Pagos del estudiante: <span id="nombre-estudiante-detalle"></span></h2>
       <button class="submit-btn" onclick="volverAEstudiantes()">Volver a lista de estudiantes</button>
       <table id="tabla-pagos-detalle">
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Monto (COP)</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
+
         <tbody></tbody>
-        <tfoot>
-          <tr>
-            <th>Total Pagado este mes</th>
-            <th id="total-pagado"></th>
-            <th></th>
-          </tr>
-          <tr>
-            <th>Estado</th>
-            <th id="estado-pago-detalle"></th>
-            <th></th>
-          </tr>
-        </tfoot>
+		<tfoot>
+		  <tr>
+			<th colspan="2">Total Pagado este mes</th>
+			<th id="total-pagado"></th>
+			<th></th>
+		  </tr>
+		  <tr>
+			<th colspan="2">Estado</th>
+			<th id="estado-pago-detalle"></th>
+			<th></th>
+		  </tr>
+		  <tr>
+			<th colspan="2">Total Pagado (histórico)</th>
+			<th id="total-historico"></th>
+			<th></th>
+		  </tr>
+		</tfoot>
+
+
       </table>
     </section>
 
@@ -258,10 +273,8 @@
 		  .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' }));
 
 		// 👉 Consulta todos los pagos de este mes
-		const pagosSnapshot = await getDocs(query(
-		  collection(db, "pagos"),
-		  where("mes", "==", mesActual)
-		));
+		const pagosSnapshot = await getDocs(collection(db, "pagos"));
+
 
 		// 🧠 Agrupar pagos por estudiante
 		const pagosPorEstudiante = {};
@@ -384,86 +397,176 @@ let estudiantesTablaCache = null;
 	}
     window.cargarSelectEstudiantes = cargarSelectEstudiantes;
 
-    async function registrarPago() {
-      const idEstudiante = document.getElementById("select-estudiante").value;
-      const monto = parseInt(document.getElementById("pago-monto").value);
-      if (!idEstudiante) {
-        alert("Selecciona un estudiante.");
-        return;
-      }
-      if (!monto || monto <= 0) {
-        alert("Ingresa un monto válido.");
-        return;
-      }
-      const hoy = new Date();
-      const mes = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
-      try {
-        await addDoc(collection(db, "pagos"), {
-          idEstudiante,
-          monto,
-          fecha: hoy.toISOString(),
-          mes
-        });
-        alert("Pago registrado.");
-        document.getElementById("pago-monto").value = "";
-      } catch (e) {
-        alert("Error registrando pago: " + e.message);
-      }
-    }
+	async function registrarPago() {
+	  const idEstudiante = document.getElementById("select-estudiante").value;
+	  const monto = parseInt(document.getElementById("pago-monto").value);
+	  const fechaInput = document.getElementById("pago-fecha").value;
+	  const mesPagado = document.getElementById("mes-pagado").value;
+
+	  if (!idEstudiante) {
+		alert("Selecciona un estudiante.");
+		return;
+	  }
+	  if (!monto || monto <= 0) {
+		alert("Ingresa un monto válido.");
+		return;
+	  }
+	  if (!fechaInput) {
+		alert("Selecciona una fecha y hora para el pago.");
+		return;
+	  }
+	  if (!mesPagado) {
+		alert("Selecciona el mes que está pagando.");
+		return;
+	  }
+
+	  const fecha = new Date(fechaInput);
+	  const mesRegistro = fecha.getFullYear() + "-" + String(fecha.getMonth() + 1).padStart(2, "0");
+
+	  try {
+		await addDoc(collection(db, "pagos"), {
+		  idEstudiante,
+		  monto,
+		  fecha: fecha.toISOString(),
+		  mesRegistro,
+		  mesPagado  // Aquí se guarda el mes que se está pagando (por adelantado o actual)
+		});
+		alert("Pago registrado.");
+		document.getElementById("pago-monto").value = "";
+		document.getElementById("pago-fecha").value = "";
+		document.getElementById("mes-pagado").value = "";
+	  } catch (e) {
+		alert("Error registrando pago: " + e.message);
+	  }
+	}
+
+
     window.registrarPago = registrarPago;
 
-    async function verPagosEstudiante(idEstudiante, nombre) {
-      showSection("detalle-pagos");
-      document.getElementById("nombre-estudiante-detalle").textContent = nombre;
+	async function verPagosEstudiante(idEstudiante, nombre) {
+	  showSection("detalle-pagos");
+	  document.getElementById("nombre-estudiante-detalle").textContent = nombre;
 
-      const tbody = document.querySelector("#tabla-pagos-detalle tbody");
-      tbody.innerHTML = "";
+	  const tbody = document.querySelector("#tabla-pagos-detalle tbody");
+	  tbody.innerHTML = "";
 
-      const hoy = new Date();
-      const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
+	  const hoy = new Date();
+	  const mesActualNum = hoy.getMonth() + 1;
 
-      try {
-        const pagosQuery = query(collection(db, "pagos"),
-          where("idEstudiante", "==", idEstudiante),
-          where("mes", "==", mesActual),
-          orderBy("fecha", "desc")
-        );
-        const pagosSnapshot = await getDocs(pagosQuery);
+	  try {
+		const pagosQuery = query(
+		  collection(db, "pagos"),
+		  where("idEstudiante", "==", idEstudiante),
+		  orderBy("fecha", "desc")
+		);
+		const pagosSnapshot = await getDocs(pagosQuery);
 
-        let totalPagado = 0;
-        pagosSnapshot.forEach(docPago => {
-          const data = docPago.data();
-          totalPagado += data.monto;
+		let totalPagado = 0;
+		let totalHistorico = 0;
 
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${new Date(data.fecha).toLocaleString()}</td>
-            <td>${data.monto.toLocaleString("es-CO")}</td>
-            <td>
-              <button class="boton-eliminar-pago" onclick="eliminarPago('${docPago.id}', '${idEstudiante}', '${nombre}')">Eliminar</button>
-              <button class="boton-generar-factura" onclick="generarFactura('${nombre}', '${new Date(data.fecha).toLocaleDateString()}', ${data.monto})">Factura</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
+		const pagosPorMes = {};
+		pagosSnapshot.forEach(docPago => {
+		  const data = docPago.data();
+		  const mesPagado = parseInt(data.mesPagado, 10);
+		  if (!pagosPorMes[mesPagado]) {
+			pagosPorMes[mesPagado] = [];
+		  }
+		  pagosPorMes[mesPagado].push({ id: docPago.id, ...data });
 
-        document.getElementById("total-pagado").textContent = totalPagado.toLocaleString("es-CO");
+		  totalHistorico += data.monto;
+		  if (mesPagado === mesActualNum) {
+			totalPagado += data.monto;
+		  }
+		});
 
-        let estadoPago = "";
-        if (totalPagado >= 15000) {
-          estadoPago = "<span class='status-pagado'>Al día</span>";
-        } else if (totalPagado > 0 && totalPagado < 15000) {
-          estadoPago = "<span class='status-menor-pago'>Al día con menor pago</span>";
-        } else {
-          estadoPago = "<span class='status-no-pagado'>No al día</span>";
-        }
-        document.getElementById("estado-pago-detalle").innerHTML = estadoPago;
+		const mesesOrdenados = Object.keys(pagosPorMes).sort((a, b) => b - a);
 
-      } catch (e) {
-        alert("Error cargando pagos: " + e.message);
-      }
-    }
+		mesesOrdenados.forEach(mes => {
+		  const pagos = pagosPorMes[mes];
+		  let subtotalMes = 0;
+
+			// Cabecera de mes mejorada
+			const thMes = document.createElement("tr");
+			thMes.innerHTML = `
+			  <td colspan="4" style="background-color: #333; color: white; text-align: center; font-weight: bold; padding: 8px;">
+				${obtenerNombreMes(mes)} — ${pagos.length} pago(s)
+			  </td>`;
+
+			tbody.appendChild(thMes);
+
+
+		  // Encabezado debajo de cada mes
+		  const trHeader = document.createElement("tr");
+		  trHeader.innerHTML = `
+			<th>Fecha</th>
+			<th>Monto (COP)</th>
+			<th>Mes Pagado</th>
+			<th>Acciones</th>`;
+		  tbody.appendChild(trHeader);
+
+		  pagos.forEach(data => {
+			const fechaPago = new Date(data.fecha);
+			const mesPagadoNum = parseInt(data.mesPagado, 10);
+			let etiquetaMesPagado = obtenerNombreMes(data.mesPagado);
+			if (mesPagadoNum > mesActualNum) {
+			  etiquetaMesPagado += " (adelantado)";
+			}
+
+			subtotalMes += data.monto;
+
+			const tr = document.createElement("tr");
+			tr.innerHTML = `
+			  <td>${fechaPago.toLocaleString()}</td>
+			  <td>${data.monto.toLocaleString("es-CO")}</td>
+			  <td>${etiquetaMesPagado}</td>
+			  <td>
+				<button class="boton-eliminar-pago" onclick="eliminarPago('${data.id}', '${idEstudiante}', '${nombre}')">Eliminar</button>
+				<button class="boton-generar-factura" onclick="generarFactura('${nombre}', '${fechaPago.toLocaleDateString()}', ${data.monto})">Factura</button>
+			  </td>`;
+			tbody.appendChild(tr);
+		  });
+
+		  const trSubtotal = document.createElement("tr");
+		  trSubtotal.innerHTML = `
+			<td></td>
+			<td style="font-weight: bold;" colspan="3">Total del mes: ${subtotalMes.toLocaleString("es-CO")}</td>`;
+		  tbody.appendChild(trSubtotal);
+		});
+
+		document.getElementById("total-pagado").textContent = totalPagado.toLocaleString("es-CO");
+		document.getElementById("total-historico").textContent = totalHistorico.toLocaleString("es-CO");
+
+		let estadoPago = "";
+		if (totalPagado >= 15000) {
+		  estadoPago = "<span class='status-pagado'>Al día</span>";
+		} else if (totalPagado > 0 && totalPagado < 15000) {
+		  estadoPago = "<span class='status-menor-pago'>Al día con menor pago</span>";
+		} else {
+		  estadoPago = "<span class='status-no-pagado'>No al día</span>";
+		}
+		document.getElementById("estado-pago-detalle").innerHTML = estadoPago;
+
+	  } catch (e) {
+		alert("Error cargando pagos: " + e.message);
+	  }
+	}
+
+
+
+
     window.verPagosEstudiante = verPagosEstudiante;
+	
+	function obtenerNombreMes(mesNumero) {
+	  const meses = [
+		"", "Enero", "Febrero", "Marzo", "Abril", "Mayo",
+		"Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+	  ];
+
+	  const num = parseInt(mesNumero, 10);
+	  return meses[num] || "Mes desconocido";
+	}
+
+
 
     function volverAEstudiantes() {
       showSection("estudiantes");
