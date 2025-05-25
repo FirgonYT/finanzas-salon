@@ -130,30 +130,33 @@
     </section>
 
     <!-- Pagos por estudiante -->
-    <section id="pagos">
-      <h2>Registrar Pago de Estudiante</h2>
-      <label for="select-estudiante">Seleccione estudiante:</label>
-      <select id="select-estudiante"></select>
+	<section id="pagos">
+	  <h2>Registrar Pago de Estudiante</h2>
 
-      <label for="pago-monto">Monto (COP):</label>
-      <input type="number" id="pago-monto" placeholder="Ejemplo: 50000" />
+	  <label for="select-estudiante">Seleccione estudiante:</label>
+	  <select id="select-estudiante"></select>
+
+	  <label for="pago-monto">Monto (COP):</label>
+	  <input type="text" id="pago-monto" placeholder="$15.000" /> <!-- ✅ Este es el único que debe quedar -->
+
 	  <label for="pago-fecha">Fecha y hora del pago:</label>
 	  <input type="datetime-local" id="pago-fecha" />
+
 	  <label for="mes-pagado">Mes que está pagando:</label>
-		<select id="mes-pagado">
-		  <option value="">Seleccione un mes</option>
-		  <option value="05">Mayo</option>
-		  <option value="06">Junio</option>
-		  <option value="07">Julio</option>
-		  <option value="08">Agosto</option>
-		  <option value="09">Septiembre</option>
-		  <option value="10">Octubre</option>
-		  <option value="11">Noviembre</option>
-		</select>
+	  <select id="mes-pagado">
+		<option value="">Seleccione un mes</option>
+		<option value="05">Mayo</option>
+		<option value="06">Junio</option>
+		<option value="07">Julio</option>
+		<option value="08">Agosto</option>
+		<option value="09">Septiembre</option>
+		<option value="10">Octubre</option>
+		<option value="11">Noviembre</option>
+	  </select>
 
+	  <button class="submit-btn" onclick="registrarPago()">Registrar Pago</button>
+	</section>
 
-      <button class="submit-btn" onclick="registrarPago()">Registrar Pago</button>
-    </section>
 
     <!-- Pagos individuales estudiante -->
     <section id="detalle-pagos">
@@ -193,27 +196,31 @@
     </section>
 
     <!-- Egresos -->
-    <section id="egresos">
-      <h2>Registrar Egreso</h2>
-      <label for="descripcion-egreso">Descripción:</label>
-      <input type="text" id="descripcion-egreso" placeholder="Ejemplo: Compra de materiales" />
-      <label for="monto-egreso">Monto (COP):</label>
-      <input type="number" id="monto-egreso" placeholder="Ejemplo: 100000" />
-      <button class="submit-btn" onclick="registrarEgreso()">Registrar Egreso</button>
+	<section id="egresos">
+	  <h2>Registrar Egreso</h2>
 
-      <h3>Lista de Egresos</h3>
-      <table id="tabla-egresos">
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Descripción</th>
-            <th>Monto (COP)</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-    </section>
+	  <label for="descripcion-egreso">Descripción:</label>
+	  <input type="text" id="descripcion-egreso" placeholder="Ejemplo: Compra de materiales" />
+
+	  <label for="monto-egreso">Monto (COP):</label>
+	  <input type="text" id="monto-egreso" placeholder="Ejemplo: $100.000" />
+
+	  <button class="submit-btn" onclick="registrarEgreso()">Registrar Egreso</button>
+
+	  <h3>Lista de Egresos</h3>
+	  <table id="tabla-egresos">
+		<thead>
+		  <tr>
+			<th>Fecha</th>
+			<th>Descripción</th>
+			<th>Monto (COP)</th>
+			<th>Acciones</th>
+		  </tr>
+		</thead>
+		<tbody></tbody>
+	  </table>
+	</section>
+
   </div>
 
   <script type="module">
@@ -424,9 +431,29 @@ let estudiantesTablaCache = null;
 	}
     window.cargarSelectEstudiantes = cargarSelectEstudiantes;
 
+	// Formatea mientras el usuario escribe
+	document.getElementById("pago-monto").addEventListener("input", function (e) {
+	  let value = e.target.value.replace(/\D/g, ""); // Solo números
+	  if (!value) {
+		e.target.value = "";
+		return;
+	  }
+
+	  const number = parseInt(value);
+	  const formatted = new Intl.NumberFormat("es-CO", {
+		style: "currency",
+		currency: "COP",
+		minimumFractionDigits: 0
+	  }).format(number);
+
+	  e.target.value = formatted;
+	});
+
+	// Función de registro
 	async function registrarPago() {
 	  const idEstudiante = document.getElementById("select-estudiante").value;
-	  const monto = parseInt(document.getElementById("pago-monto").value);
+	  const rawMonto = document.getElementById("pago-monto").value.replace(/\D/g, "");
+	  const monto = parseInt(rawMonto, 10);
 	  const fechaInput = document.getElementById("pago-fecha").value;
 	  const mesPagado = document.getElementById("mes-pagado").value;
 
@@ -456,19 +483,35 @@ let estudiantesTablaCache = null;
 		  monto,
 		  fecha: fecha.toISOString(),
 		  mesRegistro,
-		  mesPagado  // Aquí se guarda el mes que se está pagando (por adelantado o actual)
+		  mesPagado
 		});
-		alert("Pago registrado.");
+
+		const formatterCOP = new Intl.NumberFormat("es-CO", {
+		  style: "currency",
+		  currency: "COP",
+		  minimumFractionDigits: 0
+		});
+
+		alert("Pago registrado por " + formatterCOP.format(monto) + ".");
+
 		document.getElementById("pago-monto").value = "";
 		document.getElementById("pago-fecha").value = "";
 		document.getElementById("mes-pagado").value = "";
+
 	  } catch (e) {
 		alert("Error registrando pago: " + e.message);
 	  }
 	}
 
 
+
     window.registrarPago = registrarPago;
+	
+	function formatearMontoCOP(valor) {
+	  if (typeof valor !== "number") valor = Number(valor) || 0;
+	  return "$" + valor.toLocaleString("es-CO");
+	}
+		
 
 	async function verPagosEstudiante(idEstudiante, nombre) {
 	  showSection("detalle-pagos");
@@ -512,15 +555,13 @@ let estudiantesTablaCache = null;
 		  const pagos = pagosPorMes[mes];
 		  let subtotalMes = 0;
 
-			// Cabecera de mes mejorada
-			const thMes = document.createElement("tr");
-			thMes.innerHTML = `
-			  <td colspan="4" style="background-color: #333; color: white; text-align: center; font-weight: bold; padding: 8px;">
-				${obtenerNombreMes(mes)} — ${pagos.length} pago(s)
-			  </td>`;
-
-			tbody.appendChild(thMes);
-
+		  // Cabecera de mes mejorada
+		  const thMes = document.createElement("tr");
+		  thMes.innerHTML = `
+			<td colspan="4" style="background-color: #333; color: white; text-align: center; font-weight: bold; padding: 8px;">
+			  ${obtenerNombreMes(mes)} — ${pagos.length} pago(s)
+			</td>`;
+		  tbody.appendChild(thMes);
 
 		  // Encabezado debajo de cada mes
 		  const trHeader = document.createElement("tr");
@@ -544,7 +585,7 @@ let estudiantesTablaCache = null;
 			const tr = document.createElement("tr");
 			tr.innerHTML = `
 			  <td>${fechaPago.toLocaleString()}</td>
-			  <td>${data.monto.toLocaleString("es-CO")}</td>
+			  <td>${formatearMontoCOP(data.monto)}</td>
 			  <td>${etiquetaMesPagado}</td>
 			  <td>
 				<button class="boton-eliminar-pago" onclick="eliminarPago('${data.id}', '${idEstudiante}', '${nombre}')">Eliminar</button>
@@ -556,12 +597,12 @@ let estudiantesTablaCache = null;
 		  const trSubtotal = document.createElement("tr");
 		  trSubtotal.innerHTML = `
 			<td></td>
-			<td style="font-weight: bold;" colspan="3">Total del mes: ${subtotalMes.toLocaleString("es-CO")}</td>`;
+			<td style="font-weight: bold;" colspan="3">Total del mes: ${formatearMontoCOP(subtotalMes)}</td>`;
 		  tbody.appendChild(trSubtotal);
 		});
 
-		document.getElementById("total-pagado").textContent = totalPagado.toLocaleString("es-CO");
-		document.getElementById("total-historico").textContent = totalHistorico.toLocaleString("es-CO");
+		document.getElementById("total-pagado").textContent = formatearMontoCOP(totalPagado);
+		document.getElementById("total-historico").textContent = formatearMontoCOP(totalHistorico);
 
 		let estadoPago = "";
 		if (totalPagado >= 15000) {
@@ -577,8 +618,6 @@ let estudiantesTablaCache = null;
 		alert("Error cargando pagos: " + e.message);
 	  }
 	}
-
-
 
 
     window.verPagosEstudiante = verPagosEstudiante;
@@ -617,89 +656,117 @@ let estudiantesTablaCache = null;
     window.eliminarPago = eliminarPago;
 
     // Finanzas: calcula ingresos, egresos y balance
-    async function cargarFinanzas() {
-      let totalIngresos = 0;
-      let totalEgresos = 0;
+	async function cargarFinanzas() {
+	  let totalIngresos = 0;
+	  let totalEgresos = 0;
 
-      // Sumar todos los pagos
-      try {
-        const pagosSnapshot = await getDocs(collection(db, "pagos"));
-        pagosSnapshot.forEach(doc => {
-          totalIngresos += doc.data().monto;
-        });
-      } catch (e) {
-        alert("Error cargando ingresos: " + e.message);
-      }
+	  // Sumar todos los pagos
+	  try {
+		const pagosSnapshot = await getDocs(collection(db, "pagos"));
+		pagosSnapshot.forEach(doc => {
+		  totalIngresos += doc.data().monto;
+		});
+	  } catch (e) {
+		alert("Error cargando ingresos: " + e.message);
+	  }
 
       // Sumar todos los egresos
-      try {
-        const egresosSnapshot = await getDocs(collection(db, "egresos"));
-        egresosSnapshot.forEach(doc => {
-          totalEgresos += doc.data().monto;
-        });
-      } catch (e) {
-        alert("Error cargando egresos: " + e.message);
-      }
+	  try {
+		const egresosSnapshot = await getDocs(collection(db, "egresos"));
+		egresosSnapshot.forEach(doc => {
+		  totalEgresos += doc.data().monto;
+		});
+	  } catch (e) {
+		alert("Error cargando egresos: " + e.message);
+	  }
 
-      document.getElementById("total-ingresos").textContent = totalIngresos.toLocaleString("es-CO");
-      document.getElementById("total-egresos").textContent = totalEgresos.toLocaleString("es-CO");
-      document.getElementById("balance").textContent = (totalIngresos - totalEgresos).toLocaleString("es-CO");
-    }
+	  document.getElementById("total-ingresos").textContent = formatearMontoCOP(totalIngresos);
+	  document.getElementById("total-egresos").textContent = formatearMontoCOP(totalEgresos);
+	  document.getElementById("balance").textContent = formatearMontoCOP(totalIngresos - totalEgresos);
+	}
     window.cargarFinanzas = cargarFinanzas;
 
-    // Egresos
-    async function registrarEgreso() {
-      const descripcion = document.getElementById("descripcion-egreso").value.trim();
-      const monto = parseInt(document.getElementById("monto-egreso").value);
+	// Formatea automáticamente el campo de egreso mientras se escribe
+	document.getElementById("monto-egreso").addEventListener("input", function (e) {
+	  let value = e.target.value.replace(/\D/g, ""); // Quitar todo menos números
+	  if (!value) {
+		e.target.value = "";
+		return;
+	  }
 
-      if (!descripcion) {
-        alert("Por favor, ingresa la descripción del egreso.");
-        return;
-      }
-      if (!monto || monto <= 0) {
-        alert("Ingresa un monto válido para el egreso.");
-        return;
-      }
+	  const number = parseInt(value);
+	  const formatted = new Intl.NumberFormat("es-CO", {
+		style: "currency",
+		currency: "COP",
+		minimumFractionDigits: 0
+	  }).format(number);
 
-      try {
-        await addDoc(collection(db, "egresos"), {
-          descripcion,
-          monto,
-          fecha: new Date().toISOString()
-        });
-        alert("Egreso registrado.");
-        document.getElementById("descripcion-egreso").value = "";
-        document.getElementById("monto-egreso").value = "";
-        cargarEgresos();
-        cargarFinanzas();
-      } catch (e) {
-        alert("Error registrando egreso: " + e.message);
-      }
-    }
-    window.registrarEgreso = registrarEgreso;
+	  e.target.value = formatted;
+	});
 
-    async function cargarEgresos() {
-      const tbody = document.querySelector("#tabla-egresos tbody");
-      tbody.innerHTML = "";
 
-      try {
-        const egresosSnapshot = await getDocs(query(collection(db, "egresos"), orderBy("fecha", "desc")));
-        egresosSnapshot.forEach(doc => {
-          const data = doc.data();
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${new Date(data.fecha).toLocaleString()}</td>
-            <td>${data.descripcion}</td>
-            <td>${data.monto.toLocaleString("es-CO")}</td>
-            <td><button class="boton-eliminar-egreso" onclick="eliminarEgreso('${doc.id}')">Eliminar</button></td>
-          `;
-          tbody.appendChild(tr);
-        });
-      } catch (e) {
-        alert("Error cargando egresos: " + e.message);
-      }
-    }
-    window.cargarEgresos = cargarEgresos;
+
+   // Egresos
+	async function registrarEgreso() {
+	  const descripcion = document.getElementById("descripcion-egreso").value.trim();
+	  const montoRaw = document.getElementById("monto-egreso").value;
+	  const montoLimpio = montoRaw.replace(/\D/g, ""); // quitar $ y puntos
+	  const monto = parseInt(montoLimpio, 10);
+
+	  if (!descripcion) {
+		alert("Por favor, ingresa la descripción del egreso.");
+		return;
+	  }
+	  if (!monto || monto <= 0) {
+		alert("Ingresa un monto válido para el egreso.");
+		return;
+	  }
+
+	  try {
+		await addDoc(collection(db, "egresos"), {
+		  descripcion,
+		  monto,
+		  fecha: new Date().toISOString()
+		});
+		alert("Egreso registrado.");
+
+		document.getElementById("descripcion-egreso").value = "";
+		document.getElementById("monto-egreso").value = "";
+
+		cargarEgresos();
+		cargarFinanzas();
+	  } catch (e) {
+		alert("Error registrando egreso: " + e.message);
+	  }
+	}
+	
+	window.registrarEgreso = registrarEgreso;
+
+
+
+	async function cargarEgresos() {
+	  const tbody = document.querySelector("#tabla-egresos tbody");
+	  tbody.innerHTML = "";
+
+	  try {
+		const egresosSnapshot = await getDocs(query(collection(db, "egresos"), orderBy("fecha", "desc")));
+		egresosSnapshot.forEach(doc => {
+		  const data = doc.data();
+		  const tr = document.createElement("tr");
+		  tr.innerHTML = `
+			<td>${new Date(data.fecha).toLocaleString()}</td>
+			<td>${data.descripcion}</td>
+			<td>${formatearMontoCOP(data.monto)}</td>
+			<td><button class="boton-eliminar-egreso" onclick="eliminarEgreso('${doc.id}')">Eliminar</button></td>
+		  `;
+		  tbody.appendChild(tr);
+		});
+	  } catch (e) {
+		alert("Error cargando egresos: " + e.message);
+	  }
+	}
+	window.cargarEgresos = cargarEgresos;
+
 
     async function eliminarEgreso(id) {
       if (confirm("¿Deseas eliminar este egreso?")) {
