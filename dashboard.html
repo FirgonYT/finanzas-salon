@@ -996,26 +996,25 @@ let estudiantesTablaCache = null;
 	  tbody.innerHTML = "";
 
 	  try {
+		// Cargar todos los estudiantes una vez
+		const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
+		const estudiantesMap = {};
+		estudiantesSnapshot.forEach(doc => {
+		  estudiantesMap[doc.id] = doc.data().nombre;
+		});
+
+		// Cargar pagos ordenados descendente por fecha
 		const pagosSnapshot = await getDocs(
 		  query(collection(db, "pagos"), orderBy("fecha", "desc"))
 		);
 
-
-		for (const docPago of pagosSnapshot.docs) {
+		// Ahora solo recorremos y usamos el mapa
+		pagosSnapshot.forEach(docPago => {
 		  const pago = docPago.data();
 
-		  // Obtener estudiante
-		  let nombreEstudiante = "Desconocido";
-		  if (pago.idEstudiante) {
-			try {
-			  const docEstudiante = await getDoc(doc(db, "estudiantes", pago.idEstudiante));
-			  if (docEstudiante.exists()) {
-				nombreEstudiante = docEstudiante.data().nombre;
-			  }
-			} catch (e) {
-			  console.warn("Error obteniendo estudiante", e);
-			}
-		  }
+		  const nombreEstudiante = pago.idEstudiante && estudiantesMap[pago.idEstudiante]
+			? estudiantesMap[pago.idEstudiante]
+			: "Desconocido";
 
 		  const montoFormateado = new Intl.NumberFormat("es-CO", {
 			style: "currency",
@@ -1036,12 +1035,14 @@ let estudiantesTablaCache = null;
 			<td>${pago.registradoPor || "N/D"}</td>
 		  `;
 		  tbody.appendChild(tr);
-		}
+		});
 	  } catch (e) {
 		alert("Error cargando historial de pagos: " + e.message);
 	  }
 	}
+
 	window.cargarHistorialPagos = cargarHistorialPagos;
+
 
 
 
