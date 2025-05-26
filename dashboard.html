@@ -981,12 +981,23 @@ let estudiantesTablaCache = null;
     // Control acceso y carga inicial
 	onAuthStateChanged(auth, (user) => {
 	  if (user) {
-		usuarioActual = user; // Guarda el usuario activo globalmente
+		usuarioActual = user;
 		console.log("Usuario autenticado:", user.email);
 	  } else {
 		usuarioActual = null;
-		console.log("No hay usuario autenticado, redirigiendo al login...");
-		window.location.href = "index.html";  // Redirige al login si no hay usuario
+		console.log("No hay usuario autenticado");
+		// Si no hay usuario, redirigir al login
+		window.location.href = "index.html";
+	  }
+	});
+
+	// Cerrar sesión al salir o recargar la página
+	window.addEventListener('beforeunload', async (event) => {
+	  try {
+		await signOut(auth);
+		console.log("Sesión cerrada por salida o recarga");
+	  } catch (e) {
+		console.error("Error cerrando sesión en unload:", e);
 	  }
 	});
 
@@ -1042,6 +1053,32 @@ let estudiantesTablaCache = null;
 	}
 
 	window.cargarHistorialPagos = cargarHistorialPagos;
+	
+	
+	
+	let timeoutID;
+
+// Función para cerrar sesión
+	function cerrarSesionPorInactividad() {
+	  alert("Sesión cerrada por inactividad.");
+	  signOut(auth).then(() => {
+		window.location.href = "index.html"; // Redirigir al login
+	  });
+	}
+
+	// Reinicia el temporizador de inactividad
+	function reiniciarTemporizador() {
+	  clearTimeout(timeoutID);
+	  timeoutID = setTimeout(cerrarSesionPorInactividad, 180000); // 3 minutos
+	}
+
+	// Eventos que detectan actividad del usuario
+	["mousemove", "keydown", "click", "scroll", "touchstart"].forEach(evento => {
+	  document.addEventListener(evento, reiniciarTemporizador);
+	});
+
+	// Iniciar el temporizador al cargar
+	reiniciarTemporizador();
 
 
 
