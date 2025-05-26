@@ -102,8 +102,29 @@
 	.boton-eliminar-egreso:hover {
 	  background-color: #666;
 	}
+	
+	#calendario {
+	  display: none; /* Lo controla JS, pero activa la sección cuando toca */
+	}
+
+	#calendario.active {
+	  display: block;
+	}
+
+	  #calendar {
+		max-width: 900px;
+		margin: 40px auto;
+		padding: 20px;
+		background: white;
+		border-radius: 12px;
+		box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+		height: 600px; /* <- ¡IMPORTANTE! */
+	  }
+
 
   </style>
+
+
 </head>
 <body>
   <div id="sidebar">
@@ -111,10 +132,14 @@
     <button onclick="showSection('pagos')">Pagos</button>
     <button onclick="showSection('finanzas')">Finanzas</button>
     <button onclick="showSection('egresos')">Egresos</button>
-    <button onclick="logout()">Salir</button>
+    <button onclick="showSection('calendario')">Calendario</button>
+	<button onclick="showSection('historial')">Historial</button>
+	<button onclick="logout()">Salir</button>
+
   </div>
 
   <div id="main-content">
+  
     <!-- Estudiantes -->
     <section id="estudiantes" class="active">
       <h2>Agregar Estudiante</h2>
@@ -220,13 +245,44 @@
 		<tbody></tbody>
 	  </table>
 	</section>
+	
+	<!-- Calendario -->
+	<section id="calendario">
+	<h2>Agregar Evento</h2>
+	<input type="text" id="titulo-evento" placeholder="Título del evento" />
+	<input type="date" id="fecha-evento" />
+	<button class="submit-btn" onclick="agregarEvento()">Agregar Evento</button>
+	  <div id="calendar"></div>
+	</section>
+	
+	<section id="historial">
+	  <h2>Historial de Pagos Registrados</h2>
+	  <table>
+		<thead>
+		  <tr>
+			<th>Estudiante</th>
+			<th>Monto</th>
+			<th>Fecha</th>
+			<th>Mes Pagado</th>
+			<th>Registrado Por</th>
+		  </tr>
+		</thead>
+		<tbody id="tabla-historial-pagos"></tbody>
+	  </table>
+	</section>
+
+
 
   </div>
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
 
+<!-- FullCalendar JS (no como módulo, debe estar fuera del type="module") -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
@@ -239,29 +295,150 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
     const db = getFirestore(app);
+	const auth = getAuth();
+	
+	let usuarioActual = null;
 
-	function showSection(id) {
-	  document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active"));
-	  document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
-	  document.getElementById(id).classList.add("active");
+	  document.addEventListener('DOMContentLoaded', function () {
+		function showSection(id) {
+		  document.querySelectorAll("#sidebar button").forEach(btn => btn.classList.remove("active"));
+		  document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
+		  document.getElementById(id).classList.add("active");
 
-	  const btn = document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`);
-	  if (btn) btn.classList.add("active");
+		  const btn = document.querySelector(`#sidebar button[onclick="showSection('${id}')"]`);
+		  if (btn) btn.classList.add("active");
 
-	  // Carga datos según sección
-	  if (id === 'estudiantes') {
-		cargarEstudiantes();
-	  } else if (id === 'pagos') {
-		cargarSelectEstudiantes();
-	  } else if (id === 'finanzas') {
-		cargarFinanzas();
-	  } else if (id === 'egresos') {
-		cargarEgresos();
+		  if (id === 'estudiantes') {
+			cargarEstudiantes();
+		  } else if (id === 'pagos') {
+			cargarSelectEstudiantes();
+		  } else if (id === 'finanzas') {
+			cargarFinanzas();
+		  } else if (id === 'egresos') {
+			cargarEgresos();
+		  } else if (id === 'calendario') {
+			inicializarCalendario();
+		  }
+			else if (id === 'historial') {
+			cargarHistorialPagos();
+		  }
+
+		}
+
+		
+	
+	  window.showSection = showSection;
+	  
+	    showSection('estudiantes');
+
+
+	
+		async function cargarEventos() {
+	  const eventosSnapshot = await getDocs(query(collection(db, "eventos"), orderBy("createdAt", "asc")));
+	  const eventos = [];
+
+	  eventosSnapshot.forEach(doc => {
+		const data = doc.data();
+		eventos.push({
+		  id: doc.id,
+		  title: data.title,
+		  date: data.date
+		});
+	  });
+
+	  return eventos;
+	}
+
+
+	async function inicializarCalendario() {
+	  const calendarEl = document.getElementById('calendar');
+	  if (!calendarEl) {
+		console.error('No se encontró el contenedor del calendario');
+		return;
+	  }
+	if (window.calendar && typeof window.calendar.destroy === 'function') {
+	  window.calendar.destroy();
+	}
+
+	  // Traer eventos de Firestore
+	  const eventos = await cargarEventos();
+
+	  window.calendar = new FullCalendar.Calendar(calendarEl, {
+		initialView: 'dayGridMonth',
+		locale: 'es',
+		headerToolbar: {
+		  left: 'prev,next today',
+		  center: 'title',
+		  right: 'dayGridMonth,timeGridWeek,timeGridDay'
+		},
+		events: eventos,
+		selectable: true,
+		eventClick: function(info) {
+		  // Aquí podríamos poner la lógica para eliminar evento
+		  eliminarEvento(info.event);
+		}
+	  });
+
+	  window.calendar.render();
+	}
+
+
+
+	async function agregarEvento() {
+	  const titulo = document.getElementById('titulo-evento').value.trim();
+	  const fecha = document.getElementById('fecha-evento').value;
+
+	  if (!titulo || !fecha) {
+		alert("Por favor, completa el título y la fecha del evento.");
+		return;
+	  }
+
+	  try {
+		// Guardar en Firestore
+		const docRef = await addDoc(collection(db, "eventos"), {
+		  title: titulo,
+		  date: fecha,
+		  createdAt: new Date()
+		});
+
+		// Agregar evento visualmente en el calendario con el id del documento
+		window.calendar.addEvent({
+		  id: docRef.id,
+		  title: titulo,
+		  date: fecha
+		});
+
+		// Limpiar inputs
+		document.getElementById('titulo-evento').value = '';
+		document.getElementById('fecha-evento').value = '';
+
+	  } catch (error) {
+		console.error("Error al guardar evento:", error);
 	  }
 	}
-    window.showSection = showSection;
+
+	window.agregarEvento = agregarEvento;
+
+
+
+	async function eliminarEvento(event) {
+	  if (confirm(`¿Quieres eliminar el evento "${event.title}"?`)) {
+		try {
+		  // Eliminar de Firestore
+		  await deleteDoc(doc(db, "eventos", event.id));
+
+		  // Eliminar visualmente del calendario
+		  event.remove();
+
+		} catch (error) {
+		  console.error("Error al eliminar evento:", error);
+		}
+	  }
+	}
+
+	window.eliminarEvento = eliminarEvento;
+
 
     function logout() {
       signOut(auth).then(() => window.location.href = "index.html");
@@ -451,6 +628,11 @@ let estudiantesTablaCache = null;
 
 	// Función de registro
 	async function registrarPago() {
+	  if (!usuarioActual) {
+		alert("Debes iniciar sesión para registrar pagos.");
+		return;
+	  }
+
 	  const idEstudiante = document.getElementById("select-estudiante").value;
 	  const rawMonto = document.getElementById("pago-monto").value.replace(/\D/g, "");
 	  const monto = parseInt(rawMonto, 10);
@@ -476,6 +658,7 @@ let estudiantesTablaCache = null;
 
 	  const fecha = new Date(fechaInput);
 	  const mesRegistro = fecha.getFullYear() + "-" + String(fecha.getMonth() + 1).padStart(2, "0");
+	  const correoUsuario = usuarioActual.email;
 
 	  try {
 		await addDoc(collection(db, "pagos"), {
@@ -483,17 +666,13 @@ let estudiantesTablaCache = null;
 		  monto,
 		  fecha: fecha.toISOString(),
 		  mesRegistro,
-		  mesPagado
+		  mesPagado,
+		  registradoPor: correoUsuario  // Aquí guardas el correo real
 		});
 
-		const formatterCOP = new Intl.NumberFormat("es-CO", {
-		  style: "currency",
-		  currency: "COP",
-		  minimumFractionDigits: 0
-		});
+		alert("Pago registrado por " + monto + " COP.");
 
-		alert("Pago registrado por " + formatterCOP.format(monto) + ".");
-
+		// Limpiar campos
 		document.getElementById("pago-monto").value = "";
 		document.getElementById("pago-fecha").value = "";
 		document.getElementById("mes-pagado").value = "";
@@ -502,6 +681,8 @@ let estudiantesTablaCache = null;
 		alert("Error registrando pago: " + e.message);
 	  }
 	}
+
+
 
 
 
@@ -798,15 +979,75 @@ let estudiantesTablaCache = null;
     window.generarFactura = generarFactura;
 
     // Control acceso y carga inicial
-    onAuthStateChanged(auth, user => {
-      if (!user) {
-        window.location.href = "index.html";
-      } else {
-        showSection("estudiantes");
-        cargarSelectEstudiantes();
-        cargarFinanzas();
-      }
-    });
+	onAuthStateChanged(auth, (user) => {
+	  if (user) {
+		usuarioActual = user; // Guarda el usuario activo globalmente
+		console.log("Usuario autenticado:", user.email);
+	  } else {
+		usuarioActual = null;
+		console.log("No hay usuario autenticado, redirigiendo al login...");
+		window.location.href = "index.html";  // Redirige al login si no hay usuario
+	  }
+	});
+
+	
+	async function cargarHistorialPagos() {
+	  const tbody = document.querySelector("#tabla-historial-pagos");
+	  tbody.innerHTML = "";
+
+	  try {
+		const pagosSnapshot = await getDocs(
+		  query(collection(db, "pagos"), orderBy("fecha", "desc"))
+		);
+
+
+		for (const docPago of pagosSnapshot.docs) {
+		  const pago = docPago.data();
+
+		  // Obtener estudiante
+		  let nombreEstudiante = "Desconocido";
+		  if (pago.idEstudiante) {
+			try {
+			  const docEstudiante = await getDoc(doc(db, "estudiantes", pago.idEstudiante));
+			  if (docEstudiante.exists()) {
+				nombreEstudiante = docEstudiante.data().nombre;
+			  }
+			} catch (e) {
+			  console.warn("Error obteniendo estudiante", e);
+			}
+		  }
+
+		  const montoFormateado = new Intl.NumberFormat("es-CO", {
+			style: "currency",
+			currency: "COP",
+			minimumFractionDigits: 0
+		  }).format(pago.monto);
+
+		  const fechaFormateada = pago.fecha
+			? new Date(pago.fecha).toLocaleString("es-CO")
+			: "Sin fecha";
+
+		  const tr = document.createElement("tr");
+		  tr.innerHTML = `
+			<td>${nombreEstudiante}</td>
+			<td>${montoFormateado}</td>
+			<td>${fechaFormateada}</td>
+			<td>${pago.mesPagado || "N/D"}</td>
+			<td>${pago.registradoPor || "N/D"}</td>
+		  `;
+		  tbody.appendChild(tr);
+		}
+	  } catch (e) {
+		alert("Error cargando historial de pagos: " + e.message);
+	  }
+	}
+	window.cargarHistorialPagos = cargarHistorialPagos;
+
+
+
+});
   </script>
+
+
 </body>
 </html>
