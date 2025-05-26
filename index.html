@@ -58,6 +58,17 @@
       }
     }
     window.login = login;
+	
+		onAuthStateChanged(auth, (user) => {
+	  if (user) {
+		// Si ya está autenticado, redirige al panel/dashboard
+		window.location.href = "dashboard.html"; // cambia dashboard.html por tu página principal
+	  } else {
+		// No hay usuario, se queda en index.html (login)
+		console.log("No hay usuario autenticado");
+	  }
+	});
+
   </script>
 </body>
 </html>
