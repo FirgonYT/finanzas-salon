@@ -148,6 +148,7 @@
 
       <h3>Lista de Estudiantes (Estado pago mes actual)</h3>
 	  <input type="text" id="busqueda-estudiante" placeholder="Buscar estudiante por nombre..." oninput="filtrarEstudiantes()" />
+	  <button class="submit-btn" onclick="descargarInformeExcel()">Descargar Informe Excel</button>
       <table id="tabla-estudiantes">
         <thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody></tbody>
@@ -279,6 +280,16 @@
 
 <!-- FullCalendar JS (no como módulo, debe estar fuera del type="module") -->
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+
+
+
+
+
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
@@ -446,26 +457,7 @@
     window.logout = logout;
 
 	
-    async function agregarEstudiante() {
-      const nombre = document.getElementById("estudiante-nombre").value.trim();
-      if (!nombre) {
-        alert("Por favor, escribe el nombre del estudiante.");
-        return;
-      }
-      try {
-        await addDoc(collection(db, "estudiantes"), {
-          nombre,
-          creadoEn: new Date()
-        });
-        alert("Estudiante agregado.");
-        document.getElementById("estudiante-nombre").value = "";
-        cargarSelectEstudiantes();
-      } catch (e) {
-        alert("Error agregando estudiante: " + e.message);
-      }
-    }
-    window.agregarEstudiante = agregarEstudiante;
-
+let estudiantesTablaCache = null;
 
 	async function cargarEstudiantes() {
 	  console.trace("cargarEstudiantes llamada desde:");
@@ -473,21 +465,14 @@
 	  const tbody = document.querySelector("#tabla-estudiantes tbody");
 	  tbody.innerHTML = "";
 
-	  const hoy = new Date();
-	  const mesActual = hoy.getFullYear() + "-" + String(hoy.getMonth() + 1).padStart(2, "0");
-
 	  try {
-		// 👉 Consulta todos los estudiantes
 		const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
 		const estudiantes = estudiantesSnapshot.docs
 		  .map(doc => ({ id: doc.id, ...doc.data() }))
 		  .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' }));
 
-		// 👉 Consulta todos los pagos de este mes
 		const pagosSnapshot = await getDocs(collection(db, "pagos"));
 
-
-		// 🧠 Agrupar pagos por estudiante
 		const pagosPorEstudiante = {};
 		pagosSnapshot.forEach(doc => {
 		  const data = doc.data();
@@ -497,16 +482,16 @@
 		  pagosPorEstudiante[data.idEstudiante] += data.monto;
 		});
 
-		// 🧩 Crear filas y construir caché
+		// Ahora guardamos monto pagado real en el cache
 		estudiantesTablaCache = estudiantes.map(est => {
-		  const monto = pagosPorEstudiante[est.id] || 0;
+		  const montoPagado = pagosPorEstudiante[est.id] || 0;
+
 		  let estadoTexto = "";
 		  let estadoClase = "";
-
-		  if (monto >= 15000) {
+		  if (montoPagado >= 15000) {
 			estadoTexto = "Al día";
 			estadoClase = "status-pagado";
-		  } else if (monto > 0) {
+		  } else if (montoPagado > 0) {
 			estadoTexto = "Al día con menor pago";
 			estadoClase = "status-menor-pago";
 		  } else {
@@ -522,33 +507,42 @@
 			  <button class="boton-ver-pagos" onclick="verPagosEstudiante('${est.id}', '${est.nombre}')">Ver pagos</button>
 			</td>
 		  `;
-		  return tr;
+
+		  return {
+			id: est.id,
+			nombre: est.nombre,
+			montoPagado,
+			estadoTexto,
+			estadoClase,
+			trElement: tr
+		  };
 		});
 
-		// 💡 Mostrar las filas
-		estudiantesTablaCache.forEach(tr => tbody.appendChild(tr.cloneNode(true)));
+		// Mostrar la tabla normal
+		estudiantesTablaCache.forEach(e => tbody.appendChild(e.trElement.cloneNode(true)));
 
 	  } catch (e) {
 		alert("Error cargando estudiantes: " + e.message);
 	  }
 	}
-let estudiantesTablaCache = null;
-	
-    window.cargarEstudiantes = cargarEstudiantes;
+	window.cargarEstudiantes = cargarEstudiantes;
+
+
+
 	
 		function filtrarEstudiantes() {
-		const filtro = document.getElementById("busqueda-estudiante").value.toLowerCase();
-		const tbody = document.querySelector("#tabla-estudiantes tbody");
+		  const filtro = document.getElementById("busqueda-estudiante").value.toLowerCase();
+		  const tbody = document.querySelector("#tabla-estudiantes tbody");
 
-		tbody.innerHTML = ""; // Limpia la tabla
+		  tbody.innerHTML = ""; // Limpia la tabla
 
-		estudiantesTablaCache.forEach(tr => {
-		  const nombre = tr.querySelector("td")?.textContent?.toLowerCase();
-		  if (nombre.includes(filtro)) {
-			tbody.appendChild(tr.cloneNode(true));
-		  }
-		});
-	  }
+		  estudiantesTablaCache.forEach(est => {
+			if (est.nombre.toLowerCase().includes(filtro)) {
+			  tbody.appendChild(est.trElement.cloneNode(true));
+			}
+		  });
+		}
+
 
 	  window.filtrarEstudiantes = filtrarEstudiantes;
 
@@ -561,11 +555,11 @@ let estudiantesTablaCache = null;
 	  try {
 		if (!estudiantesTablaCache) {
 		  console.warn("estudiantesTablaCache no está cargado aún.");
-		  return; // No cargues nada si no hay datos disponibles aún
+		  return;
 		}
 
-		// 🧠 estudiantesTablaCache contiene filas <tr>, sacamos los nombres desde ahí
-		estudiantesTablaCache.forEach(tr => {
+		estudiantesTablaCache.forEach(est => {
+		  const tr = est.trElement;
 		  const nombre = tr.querySelector("td")?.textContent?.trim();
 		  const boton = tr.querySelector("button");
 		  const id = boton?.getAttribute("onclick")?.match(/verPagosEstudiante\('([^']+)'/)?.[1];
@@ -578,7 +572,7 @@ let estudiantesTablaCache = null;
 		  }
 		});
 
-		// 🎹 Búsqueda por letra (una sola vez)
+		// Búsqueda por letra
 		if (!select.dataset.listenerAdded) {
 		  let searchChar = '';
 		  let searchTimeout;
@@ -606,7 +600,7 @@ let estudiantesTablaCache = null;
 		alert("Error cargando estudiantes para pago: " + e.message);
 	  }
 	}
-    window.cargarSelectEstudiantes = cargarSelectEstudiantes;
+
 
 	// Formatea mientras el usuario escribe
 	document.getElementById("pago-monto").addEventListener("input", function (e) {
@@ -628,6 +622,8 @@ let estudiantesTablaCache = null;
 
 	// Función de registro
 	async function registrarPago() {
+	
+	
 	  if (!usuarioActual) {
 		alert("Debes iniciar sesión para registrar pagos.");
 		return;
@@ -1079,6 +1075,120 @@ let estudiantesTablaCache = null;
 
 	// Iniciar el temporizador al cargar
 	reiniciarTemporizador();
+	
+	async function descargarInformeExcel() {
+	  const workbook = new ExcelJS.Workbook();
+	  const sheet = workbook.addWorksheet("Informe Estudiantes");
+
+		sheet.columns = [
+		  { header: "N°", key: "numero", width: 5 },
+		  { header: "Identificador", key: "identificador", width: 15 },
+		  { header: "Nombre", key: "nombre", width: 40 },
+		  { header: "Estado", key: "estado", width: 25 },
+		  { header: "Monto Pagado (COP)", key: "montoPagado", width: 18 },
+		  { header: "Valor a Pagar (COP)", key: "valorAPagar", width: 18 }
+		];
+
+		// 👉 Negrita y fondo en encabezados
+		sheet.getRow(1).eachCell(cell => {
+		  cell.font = { bold: true };
+		  cell.alignment = { vertical: 'middle', horizontal: 'center' };
+		  cell.fill = {
+			type: 'pattern',
+			pattern: 'solid',
+			fgColor: { argb: 'FFDDDDDD' }  // gris claro
+		  };
+		  cell.border = {
+			top: { style: 'thin', color: { argb: 'FF000000' } },
+			left: { style: 'thin', color: { argb: 'FF000000' } },
+			bottom: { style: 'thin', color: { argb: 'FF000000' } },
+			right: { style: 'thin', color: { argb: 'FF000000' } }
+		  };
+		});
+
+
+	  estudiantesTablaCache.forEach((est, index) => {
+		// Supongamos que est.nombre viene con el formato "1. 170006 AGUDELO ARBOLEDA JUAN PABLO"
+		// Vamos a separar con regex o split:
+		const partes = est.nombre.trim().split(/\s+/); // separa por espacios
+		// partes = ["1.", "170006", "AGUDELO", "ARBOLEDA", "JUAN", "PABLO"]
+
+		let numero = "";
+		let identificador = "";
+		let nombreCompleto = "";
+
+		if (partes.length >= 3) {
+		  numero = partes[0].replace(/\./, ""); // quitar punto del número
+		  identificador = partes[1];
+		  nombreCompleto = partes.slice(2).join(" ");
+		} else {
+		  // fallback si el formato no es esperado
+		  nombreCompleto = est.nombre;
+		}
+
+		const deuda = Math.max(15000 - est.montoPagado, 0);
+
+		const row = sheet.addRow({
+		  numero: numero,
+		  identificador: identificador,
+		  nombre: nombreCompleto,
+		  estado: est.estadoTexto,
+		  montoPagado: est.montoPagado,
+		  valorAPagar: deuda
+		});
+
+		let fillColor = "FFFFFFFF"; // blanco por defecto
+		if (est.montoPagado === 0) {
+		  fillColor = "FFFFCCCC"; // rojo pastel
+		} else if (est.montoPagado > 0 && est.montoPagado < 15000) {
+		  fillColor = "FFFFF0CC"; // naranja pastel
+		} else {
+		  fillColor = "FFCCFFCC"; // verde pastel
+		}
+
+		row.eachCell((cell, colNumber) => {
+		  cell.fill = {
+			type: "pattern",
+			pattern: "solid",
+			fgColor: { argb: fillColor }
+		  };
+		  // Quitar wrapText en nombre y estado para evitar salto línea y recorte
+		  if (colNumber === 3 || colNumber === 4) {
+			cell.alignment = { vertical: 'middle', wrapText: false };
+		  } else if (colNumber === 5 || colNumber === 6) {
+			cell.alignment = { vertical: 'middle', horizontal: 'right' };
+		  } else {
+			cell.alignment = { vertical: 'middle', horizontal: 'center' };
+		  }
+
+		  cell.border = {
+			top: { style: 'thin', color: { argb: 'FF000000' } },
+			left: { style: 'thin', color: { argb: 'FF000000' } },
+			bottom: { style: 'thin', color: { argb: 'FF000000' } },
+			right: { style: 'thin', color: { argb: 'FF000000' } }
+		  };
+		});
+
+		// Formato moneda para montos
+		row.getCell("montoPagado").numFmt = '"$"#,##0;[Red]\-"$"#,##0';
+		row.getCell("valorAPagar").numFmt = '"$"#,##0;[Red]\-"$"#,##0';
+
+		row.height = 18; // altura estándar
+	  });
+
+	  const buffer = await workbook.xlsx.writeBuffer();
+	  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+	  const url = URL.createObjectURL(blob);
+
+	  const a = document.createElement("a");
+	  a.href = url;
+	  a.download = "Informe_Estudiantes.xlsx";
+	  a.click();
+	  URL.revokeObjectURL(url);
+	}
+	window.descargarInformeExcel = descargarInformeExcel;
+
+
 
 
 
