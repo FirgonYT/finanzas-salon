@@ -471,16 +471,26 @@ let estudiantesTablaCache = null;
 		  .map(doc => ({ id: doc.id, ...doc.data() }))
 		  .sort((a, b) => a.nombre.localeCompare(b.nombre, undefined, { numeric: true, sensitivity: 'base' }));
 
-		const pagosSnapshot = await getDocs(collection(db, "pagos"));
+			const pagosSnapshot = await getDocs(collection(db, "pagos"));
 
-		const pagosPorEstudiante = {};
-		pagosSnapshot.forEach(doc => {
-		  const data = doc.data();
-		  if (!pagosPorEstudiante[data.idEstudiante]) {
-			pagosPorEstudiante[data.idEstudiante] = 0;
-		  }
-		  pagosPorEstudiante[data.idEstudiante] += data.monto;
-		});
+			const hoy = new Date();
+			const mesActualNum = hoy.getMonth() + 1; // enero = 0, por eso +1
+
+			const pagosPorEstudiante = {};
+
+			pagosSnapshot.forEach(doc => {
+			  const data = doc.data();
+			  const mesPagadoNum = parseInt(data.mesPagado, 10);
+
+			  // Solo contar pagos que son del mes actual
+			  if (mesPagadoNum === mesActualNum) {
+				if (!pagosPorEstudiante[data.idEstudiante]) {
+				  pagosPorEstudiante[data.idEstudiante] = 0;
+				}
+				pagosPorEstudiante[data.idEstudiante] += data.monto;
+			  }
+			});
+
 
 		// Ahora guardamos monto pagado real en el cache
 		estudiantesTablaCache = estudiantes.map(est => {
