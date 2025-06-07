@@ -121,157 +121,243 @@
 		height: 600px; /* <- ¡IMPORTANTE! */
 	  }
 
+	/* Estilos para las imágenes en el modal de archivos */
+	#contenedor-archivos img {
+	  max-width: 300px;
+	  max-height: 300px;
+	  border: 1px solid #ccc;
+	  border-radius: 6px;
+	  cursor: pointer;
+	  transition: transform 0.3s ease;
+	  object-fit: contain;
+	  margin: 5px;
+	}
+
+	#contenedor-archivos img:hover {
+	  transform: scale(1.05);
+	}
+
+	/* Modal zoom de imagen */
+	#modal-zoom {
+	  display: none;
+	  position: fixed;
+	  top: 0; left: 0;
+	  width: 100%;
+	  height: 100%;
+	  background: rgba(0,0,0,0.9);
+	  z-index: 1100;
+	  justify-content: center;
+	  align-items: center;
+	  flex-direction: column;
+	}
+
+	#modal-zoom img {
+	  max-width: 90%;
+	  max-height: 80%;
+	  border-radius: 8px;
+	  margin-bottom: 10px;
+	}
+
+	#modal-zoom button {
+	  background: #444;
+	  color: white;
+	  padding: 10px 15px;
+	  border: none;
+	  border-radius: 5px;
+	  cursor: pointer;
+	  margin: 0 5px;
+	  font-weight: bold;
+	  transition: background-color 0.3s ease;
+	}
+
+	#modal-zoom button:hover {
+	  background-color: #666;
+	}
+
+	#modal-zoom button:first-child {
+	  background-color: #e53e3e; /* rojo para borrar */
+	}
+
+	#modal-zoom button:first-child:hover {
+	  background-color: #c53030;
+	}
+
 
   </style>
 
 
 </head>
-<body>
-  <div id="sidebar">
-    <button class="active" onclick="showSection('estudiantes')">Estudiantes</button>
-    <button onclick="showSection('pagos')">Pagos</button>
-    <button onclick="showSection('finanzas')">Finanzas</button>
-    <button onclick="showSection('egresos')">Egresos</button>
-    <button onclick="showSection('calendario')">Calendario</button>
-	<button onclick="showSection('historial')">Historial</button>
-	<button onclick="logout()">Salir</button>
+	<body>
+	  <div id="sidebar">
+		<button class="active" onclick="showSection('estudiantes')">Estudiantes</button>
+		<button onclick="showSection('pagos')">Pagos</button>
+		<button onclick="showSection('finanzas')">Finanzas</button>
+		<button onclick="showSection('egresos')">Egresos</button>
+		<button onclick="showSection('calendario')">Calendario</button>
+		<button onclick="showSection('historial')">Historial</button>
+		<button onclick="logout()">Salir</button>
+	  </div>
 
-  </div>
+	  <div id="main-content">
+	  
+		<!-- Estudiantes -->
+		<section id="estudiantes" class="active">
+		  <h2>Agregar Estudiante</h2>
+		  <input type="text" id="estudiante-nombre" placeholder="Nombre completo" />
+		  <button class="submit-btn" onclick="agregarEstudiante()">Añadir Estudiante</button>
 
-  <div id="main-content">
-  
-    <!-- Estudiantes -->
-    <section id="estudiantes" class="active">
-      <h2>Agregar Estudiante</h2>
-      <input type="text" id="estudiante-nombre" placeholder="Nombre completo" />
-      <button class="submit-btn" onclick="agregarEstudiante()">Añadir Estudiante</button>
+		  <h3>Lista de Estudiantes (Estado pago mes actual)</h3>
+		  <input type="text" id="busqueda-estudiante" placeholder="Buscar estudiante por nombre..." oninput="filtrarEstudiantes()" />
+		  <button class="submit-btn" onclick="descargarInformeExcel()">Descargar Informe Excel</button>
+		  <table id="tabla-estudiantes">
+			<thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead>
+			<tbody></tbody>
+		  </table>
+		</section>
 
-      <h3>Lista de Estudiantes (Estado pago mes actual)</h3>
-	  <input type="text" id="busqueda-estudiante" placeholder="Buscar estudiante por nombre..." oninput="filtrarEstudiantes()" />
-	  <button class="submit-btn" onclick="descargarInformeExcel()">Descargar Informe Excel</button>
-      <table id="tabla-estudiantes">
-        <thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </section>
+		<!-- Pagos por estudiante -->
+		<section id="pagos">
+		  <h2>Registrar Pago de Estudiante</h2>
 
-    <!-- Pagos por estudiante -->
-	<section id="pagos">
-	  <h2>Registrar Pago de Estudiante</h2>
+		  <label for="select-estudiante">Seleccione estudiante:</label>
+		  <select id="select-estudiante"></select>
 
-	  <label for="select-estudiante">Seleccione estudiante:</label>
-	  <select id="select-estudiante"></select>
+		  <label for="pago-monto">Monto (COP):</label>
+		  <input type="text" id="pago-monto" placeholder="$15.000" /> <!-- ✅ Este es el único que debe quedar -->
 
-	  <label for="pago-monto">Monto (COP):</label>
-	  <input type="text" id="pago-monto" placeholder="$15.000" /> <!-- ✅ Este es el único que debe quedar -->
+		  <label for="pago-fecha">Fecha y hora del pago:</label>
+		  <input type="datetime-local" id="pago-fecha" />
 
-	  <label for="pago-fecha">Fecha y hora del pago:</label>
-	  <input type="datetime-local" id="pago-fecha" />
+		  <label for="mes-pagado">Mes que está pagando:</label>
+		  <select id="mes-pagado">
+			<option value="">Seleccione un mes</option>
+			<option value="05">Mayo</option>
+			<option value="06">Junio</option>
+			<option value="07">Julio</option>
+			<option value="08">Agosto</option>
+			<option value="09">Septiembre</option>
+			<option value="10">Octubre</option>
+			<option value="11">Noviembre</option>
+		  </select>
 
-	  <label for="mes-pagado">Mes que está pagando:</label>
-	  <select id="mes-pagado">
-		<option value="">Seleccione un mes</option>
-		<option value="05">Mayo</option>
-		<option value="06">Junio</option>
-		<option value="07">Julio</option>
-		<option value="08">Agosto</option>
-		<option value="09">Septiembre</option>
-		<option value="10">Octubre</option>
-		<option value="11">Noviembre</option>
-	  </select>
+		  <button class="submit-btn" onclick="registrarPago()">Registrar Pago</button>
+		</section>
 
-	  <button class="submit-btn" onclick="registrarPago()">Registrar Pago</button>
-	</section>
+		<!-- Pagos individuales estudiante -->
+		<section id="detalle-pagos">
+		  <h2>Pagos del estudiante: <span id="nombre-estudiante-detalle"></span></h2>
+		  <button class="submit-btn" onclick="volverAEstudiantes()">Volver a lista de estudiantes</button>
+		  <table id="tabla-pagos-detalle">
 
+			<tbody></tbody>
+			<tfoot>
+			  <tr>
+				<th colspan="2">Total Pagado este mes</th>
+				<th id="total-pagado"></th>
+				<th></th>
+			  </tr>
+			  <tr>
+				<th colspan="2">Estado</th>
+				<th id="estado-pago-detalle"></th>
+				<th></th>
+			  </tr>
+			  <tr>
+				<th colspan="2">Total Pagado (histórico)</th>
+				<th id="total-historico"></th>
+				<th></th>
+			  </tr>
+			</tfoot>
 
-    <!-- Pagos individuales estudiante -->
-    <section id="detalle-pagos">
-      <h2>Pagos del estudiante: <span id="nombre-estudiante-detalle"></span></h2>
-      <button class="submit-btn" onclick="volverAEstudiantes()">Volver a lista de estudiantes</button>
-      <table id="tabla-pagos-detalle">
+		  </table>
+		</section>
 
-        <tbody></tbody>
-		<tfoot>
-		  <tr>
-			<th colspan="2">Total Pagado este mes</th>
-			<th id="total-pagado"></th>
-			<th></th>
-		  </tr>
-		  <tr>
-			<th colspan="2">Estado</th>
-			<th id="estado-pago-detalle"></th>
-			<th></th>
-		  </tr>
-		  <tr>
-			<th colspan="2">Total Pagado (histórico)</th>
-			<th id="total-historico"></th>
-			<th></th>
-		  </tr>
-		</tfoot>
+		<!-- Finanzas -->
+		<section id="finanzas">
+		  <h2>Finanzas</h2>
+		  <p><strong>Ingresos Totales (pagos):</strong> COP <span id="total-ingresos">0</span></p>
+		  <p><strong>Egresos Totales:</strong> COP <span id="total-egresos">0</span></p>
+		  <p><strong>Balance:</strong> COP <span id="balance">0</span></p>
+		</section>
 
+		<!-- Egresos -->
+		<section id="egresos">
+		  <h2>Registrar Egreso</h2>
 
-      </table>
-    </section>
+		  <label for="descripcion-egreso">Descripción:</label>
+		  <input type="text" id="descripcion-egreso" placeholder="Ejemplo: Compra de materiales" />
 
-    <!-- Finanzas -->
-    <section id="finanzas">
-      <h2>Finanzas</h2>
-      <p><strong>Ingresos Totales (pagos):</strong> COP <span id="total-ingresos">0</span></p>
-      <p><strong>Egresos Totales:</strong> COP <span id="total-egresos">0</span></p>
-      <p><strong>Balance:</strong> COP <span id="balance">0</span></p>
-    </section>
+		  <label for="monto-egreso">Monto (COP):</label>
+		  <input type="text" id="monto-egreso" placeholder="Ejemplo: $100.000" />
 
-    <!-- Egresos -->
-	<section id="egresos">
-	  <h2>Registrar Egreso</h2>
+		  <button class="submit-btn" onclick="registrarEgreso()">Registrar Egreso</button>
 
-	  <label for="descripcion-egreso">Descripción:</label>
-	  <input type="text" id="descripcion-egreso" placeholder="Ejemplo: Compra de materiales" />
+		  <h3>Lista de Egresos</h3>
+		  <table id="tabla-egresos">
+			<thead>
+			  <tr>
+				<th>Fecha</th>
+				<th>Descripción</th>
+				<th>Monto (COP)</th>
+				<th>Acciones</th>
+			  </tr>
+			</thead>
+			<tbody></tbody>
+		  </table>
+		</section>
+		
+		<!-- Calendario -->
+		<section id="calendario">
+		  <h2>Agregar Evento</h2>
+		  <input type="text" id="titulo-evento" placeholder="Título del evento" />
+		  <input type="date" id="fecha-evento" />
+		  <button class="submit-btn" onclick="agregarEvento()">Agregar Evento</button>
+		  <div id="calendar"></div>
+		</section>
+		
+		<section id="historial">
+		  <h2>Historial de Pagos Registrados</h2>
+		  <table>
+			<thead>
+			  <tr>
+				<th>Estudiante</th>
+				<th>Monto</th>
+				<th>Fecha</th>
+				<th>Mes Pagado</th>
+				<th>Registrado Por</th>
+			  </tr>
+			</thead>
+			<tbody id="tabla-historial-pagos"></tbody>
+		  </table>
+		</section>
 
-	  <label for="monto-egreso">Monto (COP):</label>
-	  <input type="text" id="monto-egreso" placeholder="Ejemplo: $100.000" />
+	  </div>
 
-	  <button class="submit-btn" onclick="registrarEgreso()">Registrar Egreso</button>
+	  <!-- Modal para mostrar archivos de egresos -->
+	  <div id="modal-archivos" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+	   background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+		<div style="background:#fff; padding:20px; max-width:80%; max-height:80%; overflow:auto; border-radius:10px;">
+		  <h3>Archivos del Egreso</h3>
+		  <div id="contenedor-archivos" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+		  <button onclick="cerrarModalArchivos()">Cerrar</button>
+		</div>
+	  </div>
 
-	  <h3>Lista de Egresos</h3>
-	  <table id="tabla-egresos">
-		<thead>
-		  <tr>
-			<th>Fecha</th>
-			<th>Descripción</th>
-			<th>Monto (COP)</th>
-			<th>Acciones</th>
-		  </tr>
-		</thead>
-		<tbody></tbody>
-	  </table>
-	</section>
+	<!-- Modal para zoom de imagen -->
+		<div id="modal-zoom" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+		 background:rgba(0,0,0,0.9); z-index:1100; justify-content:center; align-items:center; flex-direction: column;">
+		  <img id="imagen-zoom" src="" alt="Imagen ampliada" style="max-width:90%; max-height:80%; border-radius:8px; margin-bottom: 10px;">
+		  <div>
+			<button class="boton-eliminar-egreso" onclick="borrarImagen()">Borrar Imagen</button>
+			<button class="boton-eliminar-egreso" onclick="cerrarModalZoom()">Cerrar</button>
+		  </div>
+		</div>
+
 	
-	<!-- Calendario -->
-	<section id="calendario">
-	<h2>Agregar Evento</h2>
-	<input type="text" id="titulo-evento" placeholder="Título del evento" />
-	<input type="date" id="fecha-evento" />
-	<button class="submit-btn" onclick="agregarEvento()">Agregar Evento</button>
-	  <div id="calendar"></div>
-	</section>
 	
-	<section id="historial">
-	  <h2>Historial de Pagos Registrados</h2>
-	  <table>
-		<thead>
-		  <tr>
-			<th>Estudiante</th>
-			<th>Monto</th>
-			<th>Fecha</th>
-			<th>Mes Pagado</th>
-			<th>Registrado Por</th>
-		  </tr>
-		</thead>
-		<tbody id="tabla-historial-pagos"></tbody>
-	  </table>
-	</section>
-
+	<div id="progress-container" style="display:none; margin-top:10px;">
+	  <progress id="progress-bar" value="0" max="100" style="width:100%;"></progress>
+	  <span id="progress-text">0%</span>
+	</div>
 
 
   </div>
@@ -293,7 +379,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
@@ -939,12 +1025,26 @@ let estudiantesTablaCache = null;
 		const egresosSnapshot = await getDocs(query(collection(db, "egresos"), orderBy("fecha", "desc")));
 		egresosSnapshot.forEach(doc => {
 		  const data = doc.data();
+
+		  // Si ya tiene archivo subido, mostramos botón para verlo
+			const botonVerArchivo = data.archivosImgur && data.archivosImgur.length > 0
+			  ? `<button class="boton-eliminar-egreso" onclick='mostrarArchivos(${JSON.stringify(data.archivosImgur)}, "${doc.id}")'>Ver Archivos</button>`
+			  : "";
+
+
+
+
+
 		  const tr = document.createElement("tr");
 		  tr.innerHTML = `
 			<td>${new Date(data.fecha).toLocaleString()}</td>
 			<td>${data.descripcion}</td>
 			<td>${formatearMontoCOP(data.monto)}</td>
-			<td><button class="boton-eliminar-egreso" onclick="eliminarEgreso('${doc.id}')">Eliminar</button></td>
+			<td>
+			  <button class="boton-eliminar-egreso" onclick="eliminarEgreso('${doc.id}')">Eliminar</button>
+			  <button class="boton-eliminar-egreso" onclick="subirArchivoEgreso('${doc.id}')">Archivos</button>
+			  ${botonVerArchivo}
+			</td>
 		  `;
 		  tbody.appendChild(tr);
 		});
@@ -953,6 +1053,7 @@ let estudiantesTablaCache = null;
 	  }
 	}
 	window.cargarEgresos = cargarEgresos;
+
 
 
     async function eliminarEgreso(id) {
@@ -968,7 +1069,183 @@ let estudiantesTablaCache = null;
       }
     }
     window.eliminarEgreso = eliminarEgreso;
+	
+	
+	
+	async function subirArchivoEgreso(idEgreso) {
+	  const input = document.createElement('input');
+	  input.type = 'file';
+	  input.accept = 'image/*';
 
+	  input.onchange = () => {
+		const file = input.files[0];
+		if (!file) return;
+
+		const formData = new FormData();
+		formData.append("image", file);
+
+		// Mostrar barra
+		const progressContainer = document.getElementById('progress-container');
+		const progressBar = document.getElementById('progress-bar');
+		const progressText = document.getElementById('progress-text');
+
+		progressContainer.style.display = 'block';
+		progressBar.value = 0;
+		progressText.textContent = '0%';
+
+		const xhr = new XMLHttpRequest();
+		xhr.open("POST", "https://api.imgur.com/3/image", true);
+		xhr.setRequestHeader("Authorization", "Client-ID 37c14a30903a3e1");
+
+		xhr.upload.onprogress = function(event) {
+		  if (event.lengthComputable) {
+			const percent = Math.round((event.loaded / event.total) * 100);
+			progressBar.value = percent;
+			progressText.textContent = percent + '%';
+		  }
+		};
+
+		xhr.onload = async function() {
+		  if (xhr.status === 200) {
+			const result = JSON.parse(xhr.responseText);
+			if (result.success) {
+			  const url = result.data.link;
+			  const egresoRef = doc(db, "egresos", idEgreso);
+			  const egresoSnap = await getDoc(egresoRef);
+			  const dataActual = egresoSnap.data();
+			  const archivosActuales = dataActual.archivosImgur || [];
+
+			  await updateDoc(egresoRef, {
+				archivosImgur: [...archivosActuales, url]
+			  });
+
+			  alert("Archivo subido con éxito.");
+			  cargarEgresos();
+			} else {
+			  alert("Error subiendo a Imgur.");
+			}
+		  } else {
+			alert("Error en la carga: " + xhr.statusText);
+		  }
+		  // Ocultar barra al terminar
+		  progressContainer.style.display = 'none';
+		};
+
+		xhr.onerror = function() {
+		  alert("Error en la carga.");
+		  progressContainer.style.display = 'none';
+		};
+
+		xhr.send(formData);
+	  };
+
+	  input.click();
+	}
+
+
+	window.subirArchivoEgreso = subirArchivoEgreso;
+	
+	
+	
+	
+	  function mostrarArchivos(archivos, idEgreso) {
+		const contenedor = document.getElementById("contenedor-archivos");
+		contenedor.innerHTML = "";
+
+		if (!archivos || archivos.length === 0) {
+		  contenedor.innerHTML = "<p>No hay archivos para este egreso.</p>";
+		} else {
+		  archivos.forEach((url, index) => {
+			const img = document.createElement("img");
+			img.src = url;
+			img.style.maxWidth = "300px";
+			img.style.maxHeight = "300px";
+			img.style.border = "1px solid #ccc";
+			img.style.borderRadius = "6px";
+			img.style.cursor = "pointer";
+			img.style.margin = "5px";
+			img.alt = "Archivo egreso " + (index + 1);
+			img.addEventListener("click", () => abrirModalZoom(url, idEgreso));
+			contenedor.appendChild(img);
+		  });
+		}
+
+		// Guardar el id del egreso para usarlo en borrar imagen
+		window._egresoActual = idEgreso;
+		document.getElementById("modal-archivos").style.display = "flex";
+	  }
+
+	  window.mostrarArchivos = mostrarArchivos;
+
+	  // Cerrar modal de archivos
+	  function cerrarModalArchivos() {
+		document.getElementById("modal-archivos").style.display = "none";
+	  }
+	  window.cerrarModalArchivos = cerrarModalArchivos;
+	
+	
+		  function abrirModalZoom(url, idEgreso) {
+		const modalZoom = document.getElementById("modal-zoom");
+		const imagenZoom = document.getElementById("imagen-zoom");
+		imagenZoom.src = url;
+		modalZoom.style.display = "flex";
+
+		// Guardar URL e id para borrar
+		window._urlImagenActual = url;
+		window._egresoActual = idEgreso;
+	  }
+	  window.abrirModalZoom = abrirModalZoom;
+
+	  // Cerrar modal zoom
+	  function cerrarModalZoom() {
+		document.getElementById("modal-zoom").style.display = "none";
+	  }
+	  window.cerrarModalZoom = cerrarModalZoom;
+
+	  // Borrar imagen (subida a Imgur y Firebase)
+	  async function borrarImagen() {
+		if (!window._egresoActual || !window._urlImagenActual) {
+		  alert("No se pudo identificar la imagen o egreso para borrar.");
+		  return;
+		}
+
+		if (!confirm("¿Seguro que deseas borrar esta imagen?")) return;
+
+		try {
+		  const egresoRef = doc(db, "egresos", window._egresoActual);
+		  const egresoSnap = await getDoc(egresoRef);
+		  if (!egresoSnap.exists()) {
+			alert("No se encontró el egreso.");
+			return;
+		  }
+
+		  const dataActual = egresoSnap.data();
+		  const archivosActuales = dataActual.archivosImgur || [];
+
+		  // Filtrar la imagen que se borrará
+		  const nuevosArchivos = archivosActuales.filter(url => url !== window._urlImagenActual);
+
+		  await updateDoc(egresoRef, {
+			archivosImgur: nuevosArchivos
+		  });
+
+		  alert("Imagen borrada correctamente.");
+		  cerrarModalZoom();
+		  cerrarModalArchivos();
+
+		  // Recargar la tabla para refrescar el botón "Ver Archivos"
+		  cargarEgresos();
+		} catch (e) {
+		  alert("Error borrando imagen: " + e.message);
+		}
+	  }
+	  window.borrarImagen = borrarImagen;
+		
+
+
+	
+	
+	
     // Generar factura sencilla (solo muestra ventana con detalles, puede adaptarse para PDF)
     function generarFactura(nombre, fechaPago, monto) {
       const contenido = `
