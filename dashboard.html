@@ -208,7 +208,19 @@
 
 		  <h3>Lista de Estudiantes (Estado pago mes actual)</h3>
 		  <input type="text" id="busqueda-estudiante" placeholder="Buscar estudiante por nombre..." oninput="filtrarEstudiantes()" />
-		  <button class="submit-btn" onclick="descargarInformeExcel()">Descargar Informe Excel</button>
+		  <label for="mes-informe">Mes del Informe:</label>
+		  <select id="mes-informe">
+		    <option value="05">Mayo</option>
+		    <option value="06">Junio</option>
+		    <option value="07">Julio</option>
+		    <option value="08">Agosto</option>
+		    <option value="09">Septiembre</option>
+		    <option value="10">Octubre</option>
+		    <option value="11">Noviembre</option>
+		  </select>
+
+		<button class="submit-btn" onclick="descargarInformeExcel()">Descargar Informe Excel</button>
+
 		  <table id="tabla-estudiantes">
 			<thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead>
 			<tbody></tbody>
@@ -1364,115 +1376,106 @@ let estudiantesTablaCache = null;
 	reiniciarTemporizador();
 	
 	async function descargarInformeExcel() {
+	  const mesSeleccionado = document.getElementById("mes-informe").value;
+	  if (!mesSeleccionado) {
+		alert("Selecciona un mes para el informe.");
+		return;
+	  }
+
+	  const pagosSnapshot = await getDocs(collection(db, "pagos"));
+	  const pagosPorEstudiante = {};
+
+	  pagosSnapshot.forEach(doc => {
+		const data = doc.data();
+		if (data.mesPagado === mesSeleccionado) {
+		  if (!pagosPorEstudiante[data.idEstudiante]) {
+			pagosPorEstudiante[data.idEstudiante] = 0;
+		  }
+		  pagosPorEstudiante[data.idEstudiante] += data.monto;
+		}
+	  });
+
 	  const workbook = new ExcelJS.Workbook();
 	  const sheet = workbook.addWorksheet("Informe Estudiantes");
 
-		sheet.columns = [
-		  { header: "N°", key: "numero", width: 5 },
-		  { header: "Identificador", key: "identificador", width: 15 },
-		  { header: "Nombre", key: "nombre", width: 40 },
-		  { header: "Estado", key: "estado", width: 25 },
-		  { header: "Monto Pagado", key: "montoPagado", width: 18 },
-		  { header: "Valor a Pagar", key: "valorAPagar", width: 18 }
-		];
+	  sheet.columns = [
+		{ header: "N°", key: "numero", width: 5 },
+		{ header: "Identificador", key: "identificador", width: 15 },
+		{ header: "Nombre", key: "nombre", width: 40 },
+		{ header: "Estado", key: "estado", width: 25 },
+		{ header: "Monto Pagado", key: "montoPagado", width: 18 },
+		{ header: "Valor a Pagar", key: "valorAPagar", width: 18 }
+	  ];
 
-		// 👉 Negrita y fondo en encabezados
-		sheet.getRow(1).eachCell(cell => {
-		  cell.font = { bold: true };
-		  cell.alignment = { vertical: 'middle', horizontal: 'center' };
-		  cell.fill = {
-			type: 'pattern',
-			pattern: 'solid',
-			fgColor: { argb: 'FFDDDDDD' }  // gris claro
-		  };
-		  cell.border = {
-			top: { style: 'thin', color: { argb: 'FF000000' } },
-			left: { style: 'thin', color: { argb: 'FF000000' } },
-			bottom: { style: 'thin', color: { argb: 'FF000000' } },
-			right: { style: 'thin', color: { argb: 'FF000000' } }
-		  };
-		});
-
+	  sheet.getRow(1).eachCell(cell => {
+		cell.font = { bold: true };
+		cell.alignment = { vertical: 'middle', horizontal: 'center' };
+		cell.fill = {
+		  type: 'pattern',
+		  pattern: 'solid',
+		  fgColor: { argb: 'FFDDDDDD' }
+		};
+		cell.border = {
+		  top: { style: 'thin' }, left: { style: 'thin' },
+		  bottom: { style: 'thin' }, right: { style: 'thin' }
+		};
+	  });
 
 	  estudiantesTablaCache.forEach((est, index) => {
-		// Supongamos que est.nombre viene con el formato "1. 170006 AGUDELO ARBOLEDA JUAN PABLO"
-		// Vamos a separar con regex o split:
-		const partes = est.nombre.trim().split(/\s+/); // separa por espacios
-		// partes = ["1.", "170006", "AGUDELO", "ARBOLEDA", "JUAN", "PABLO"]
+		const montoPagado = pagosPorEstudiante[est.id] || 0;
+		const deuda = Math.max(15000 - montoPagado, 0);
 
-		let numero = "";
-		let identificador = "";
-		let nombreCompleto = "";
-
+		const partes = est.nombre.trim().split(/\s+/);
+		let numero = "", identificador = "", nombreCompleto = est.nombre;
 		if (partes.length >= 3) {
-		  numero = partes[0].replace(/\./, ""); // quitar punto del número
+		  numero = partes[0].replace(/\./, "");
 		  identificador = partes[1];
 		  nombreCompleto = partes.slice(2).join(" ");
-		} else {
-		  // fallback si el formato no es esperado
-		  nombreCompleto = est.nombre;
 		}
 
-		const deuda = Math.max(15000 - est.montoPagado, 0);
+		let estadoTexto = "No al día";
+		if (montoPagado >= 15000) {
+		  estadoTexto = "Al día";
+		} else if (montoPagado > 0) {
+		  estadoTexto = "Al día con menor pago";
+		}
 
 		const row = sheet.addRow({
-		  numero: numero,
-		  identificador: identificador,
-		  nombre: nombreCompleto,
-		  estado: est.estadoTexto,
-		  montoPagado: est.montoPagado,
-		  valorAPagar: deuda
+		  numero, identificador, nombre: nombreCompleto,
+		  estado: estadoTexto, montoPagado, valorAPagar: deuda
 		});
 
-		let fillColor = "FFFFFFFF"; // blanco por defecto
-		if (est.montoPagado === 0) {
-		  fillColor = "FFFFCCCC"; // rojo pastel
-		} else if (est.montoPagado > 0 && est.montoPagado < 15000) {
-		  fillColor = "FFFFF0CC"; // naranja pastel
-		} else {
-		  fillColor = "FFCCFFCC"; // verde pastel
-		}
+		let fillColor = "FFFFFFFF";
+		if (montoPagado === 0) fillColor = "FFFFCCCC";
+		else if (montoPagado < 15000) fillColor = "FFFFF0CC";
+		else fillColor = "FFCCFFCC";
 
 		row.eachCell((cell, colNumber) => {
-		  cell.fill = {
-			type: "pattern",
-			pattern: "solid",
-			fgColor: { argb: fillColor }
-		  };
-		  // Quitar wrapText en nombre y estado para evitar salto línea y recorte
-		  if (colNumber === 3 || colNumber === 4) {
-			cell.alignment = { vertical: 'middle', wrapText: false };
-		  } else if (colNumber === 5 || colNumber === 6) {
-			cell.alignment = { vertical: 'middle', horizontal: 'right' };
-		  } else {
-			cell.alignment = { vertical: 'middle', horizontal: 'center' };
-		  }
-
+		  cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: fillColor } };
+		  cell.alignment = { vertical: 'middle', horizontal: colNumber >= 5 ? 'right' : 'center' };
 		  cell.border = {
-			top: { style: 'thin', color: { argb: 'FF000000' } },
-			left: { style: 'thin', color: { argb: 'FF000000' } },
-			bottom: { style: 'thin', color: { argb: 'FF000000' } },
-			right: { style: 'thin', color: { argb: 'FF000000' } }
+			top: { style: 'thin' }, left: { style: 'thin' },
+			bottom: { style: 'thin' }, right: { style: 'thin' }
 		  };
 		});
 
-		// Formato moneda para montos
 		row.getCell("montoPagado").numFmt = '"$"#,##0;[Red]\-"$"#,##0';
 		row.getCell("valorAPagar").numFmt = '"$"#,##0;[Red]\-"$"#,##0';
-
-		row.height = 18; // altura estándar
+		row.height = 18;
 	  });
 
 	  const buffer = await workbook.xlsx.writeBuffer();
-	  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+	  const blob = new Blob([buffer], {
+		type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+	  });
 	  const url = URL.createObjectURL(blob);
-
 	  const a = document.createElement("a");
 	  a.href = url;
-	  a.download = "Informe_Estudiantes.xlsx";
+	  a.download = `Informe_Estudiantes_Mes_${mesSeleccionado}.xlsx`;
 	  a.click();
 	  URL.revokeObjectURL(url);
 	}
+
 	window.descargarInformeExcel = descargarInformeExcel;
 
 
