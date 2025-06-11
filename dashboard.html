@@ -392,6 +392,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+	import { deleteField } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+
 
     const firebaseConfig = {
       apiKey: "AIzaSyBmiMMw8d39YhXJ7JaTnsiZlExiNvoC9rk",
@@ -799,6 +801,7 @@ let estudiantesTablaCache = null;
 		
 
 	async function verPagosEstudiante(idEstudiante, nombre) {
+	window._estudianteActual = { id: idEstudiante, nombre };
 	  showSection("detalle-pagos");
 	  document.getElementById("nombre-estudiante-detalle").textContent = nombre;
 
@@ -869,14 +872,21 @@ let estudiantesTablaCache = null;
 
 			const tr = document.createElement("tr");
 			tr.innerHTML = `
-			  <td>${fechaPago.toLocaleString()}</td>
-			  <td>${formatearMontoCOP(data.monto)}</td>
-			  <td>${etiquetaMesPagado}</td>
-			  <td>
+			<td>${fechaPago.toLocaleString()}</td>
+			<td>${formatearMontoCOP(data.monto)}</td>
+			<td>${etiquetaMesPagado}</td>
+			<td>
 				<button class="boton-eliminar-pago" onclick="eliminarPago('${data.id}', '${idEstudiante}', '${nombre}')">Eliminar</button>
-				<button class="boton-generar-factura" onclick="generarFactura('${nombre}', '${fechaPago.toLocaleDateString()}', ${data.monto})">Factura</button>
-			  </td>`;
+				<button class="boton-eliminar-pago" onclick="subirFacturaPago('${data.id}')">Subir Factura</button>
+				${data.imagenFactura ? `
+				<img src="${data.imagenFactura}" 
+					alt="Factura" 
+					style="width:40px; height:40px; cursor:pointer; border-radius:5px; vertical-align: middle;"
+					onclick="abrirModalZoom('${data.imagenFactura}', '${data.id}', 'pago')">` : ''
+				}
+			</td>`;
 			tbody.appendChild(tr);
+
 		  });
 
 		  const trSubtotal = document.createElement("tr");
@@ -1196,17 +1206,18 @@ let estudiantesTablaCache = null;
 	  window.cerrarModalArchivos = cerrarModalArchivos;
 	
 	
-		  function abrirModalZoom(url, idEgreso) {
+		function abrirModalZoom(url, id, tipo = "egreso") {
 		const modalZoom = document.getElementById("modal-zoom");
 		const imagenZoom = document.getElementById("imagen-zoom");
 		imagenZoom.src = url;
 		modalZoom.style.display = "flex";
 
-		// Guardar URL e id para borrar
 		window._urlImagenActual = url;
-		window._egresoActual = idEgreso;
-	  }
-	  window.abrirModalZoom = abrirModalZoom;
+		window._tipoImagenActual = tipo;
+		window._idDocumentoImagen = id;
+		}
+		window.abrirModalZoom = abrirModalZoom;
+
 
 	  // Cerrar modal zoom
 	  function cerrarModalZoom() {
@@ -1215,43 +1226,51 @@ let estudiantesTablaCache = null;
 	  window.cerrarModalZoom = cerrarModalZoom;
 
 	  // Borrar imagen (subida a Imgur y Firebase)
-	  async function borrarImagen() {
-		if (!window._egresoActual || !window._urlImagenActual) {
-		  alert("No se pudo identificar la imagen o egreso para borrar.");
-		  return;
+		async function borrarImagen() {
+		const url = window._urlImagenActual;
+		const tipo = window._tipoImagenActual;
+		const id = window._idDocumentoImagen;
+
+		if (!url || !tipo || !id) {
+			alert("No se pudo identificar el origen de la imagen.");
+			return;
 		}
 
 		if (!confirm("¿Seguro que deseas borrar esta imagen?")) return;
 
 		try {
-		  const egresoRef = doc(db, "egresos", window._egresoActual);
-		  const egresoSnap = await getDoc(egresoRef);
-		  if (!egresoSnap.exists()) {
-			alert("No se encontró el egreso.");
+			const ref = doc(db, tipo === "pago" ? "pagos" : "egresos", id);
+			const snap = await getDoc(ref);
+			if (!snap.exists()) {
+			alert("No se encontró el documento.");
 			return;
-		  }
+			}
 
-		  const dataActual = egresoSnap.data();
-		  const archivosActuales = dataActual.archivosImgur || [];
+			const data = snap.data();
 
-		  // Filtrar la imagen que se borrará
-		  const nuevosArchivos = archivosActuales.filter(url => url !== window._urlImagenActual);
+			if (tipo === "egreso") {
+			const archivos = data.archivosImgur || [];
+			const nuevos = archivos.filter(link => link !== url);
+			await updateDoc(ref, { archivosImgur: nuevos });
+			} else {
+			await updateDoc(ref, { imagenFactura: deleteField() });
+			}
 
-		  await updateDoc(egresoRef, {
-			archivosImgur: nuevosArchivos
-		  });
+			alert("Imagen borrada correctamente.");
+			cerrarModalZoom();
+			cerrarModalArchivos?.();
 
-		  alert("Imagen borrada correctamente.");
-		  cerrarModalZoom();
-		  cerrarModalArchivos();
-
-		  // Recargar la tabla para refrescar el botón "Ver Archivos"
-		  cargarEgresos();
+			if (tipo === "egreso") {
+			cargarEgresos();
+			} else if (window._estudianteActual) {
+			await verPagosEstudiante(window._estudianteActual.id, window._estudianteActual.nombre);
+			}
 		} catch (e) {
-		  alert("Error borrando imagen: " + e.message);
+			alert("Error borrando imagen: " + e.message);
 		}
-	  }
-	  window.borrarImagen = borrarImagen;
+		}
+		window.borrarImagen = borrarImagen;
+
 		
 
 
@@ -1477,6 +1496,71 @@ let estudiantesTablaCache = null;
 	}
 
 	window.descargarInformeExcel = descargarInformeExcel;
+
+	async function subirFacturaPago(idPago) {
+	const input = document.createElement('input');
+	input.type = 'file';
+	input.accept = 'image/*';
+
+	input.onchange = () => {
+		const file = input.files[0];
+		if (!file) return;
+
+		const formData = new FormData();
+		formData.append("image", file);
+
+		const progressContainer = document.getElementById('progress-container');
+		const progressBar = document.getElementById('progress-bar');
+		const progressText = document.getElementById('progress-text');
+
+		progressContainer.style.display = 'block';
+		progressBar.value = 0;
+		progressText.textContent = '0%';
+
+		const xhr = new XMLHttpRequest();
+		xhr.open("POST", "https://api.imgur.com/3/image", true);
+		xhr.setRequestHeader("Authorization", "Client-ID 37c14a30903a3e1");
+
+		xhr.upload.onprogress = function(event) {
+		if (event.lengthComputable) {
+			const percent = Math.round((event.loaded / event.total) * 100);
+			progressBar.value = percent;
+			progressText.textContent = percent + '%';
+		}
+		};
+
+		xhr.onload = async function() {
+		progressContainer.style.display = 'none';
+		if (xhr.status === 200) {
+			const result = JSON.parse(xhr.responseText);
+			if (result.success) {
+			const url = result.data.link;
+			const pagoRef = doc(db, "pagos", idPago);
+			await updateDoc(pagoRef, { imagenFactura: url });
+
+			alert("Factura subida con éxito.");
+			if (window._estudianteActual) {
+				await verPagosEstudiante(window._estudianteActual.id, window._estudianteActual.nombre);
+			}
+			} else {
+			alert("Error subiendo a Imgur.");
+			}
+		} else {
+			alert("Error: " + xhr.statusText);
+		}
+		};
+
+		xhr.onerror = function() {
+		progressContainer.style.display = 'none';
+		alert("Error en la carga.");
+		};
+
+		xhr.send(formData);
+	};
+
+	input.click();
+	}
+	window.subirFacturaPago = subirFacturaPago;
 
 
 
