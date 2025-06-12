@@ -195,6 +195,12 @@
 		<button onclick="showSection('egresos')">Egresos</button>
 		<button onclick="showSection('calendario')">Calendario</button>
 		<button onclick="showSection('historial')">Historial</button>
+		<div style="margin: 20px 10px; color: white; font-size: 14px;">
+		<strong>Registrado como:</strong><br>
+		<span id="usuario-nombre-visible">Cargando...</span>
+		<br>
+		</div>
+
 		<button onclick="logout()">Salir</button>
 	  </div>
 
@@ -259,6 +265,7 @@
 		<section id="detalle-pagos">
 		  <h2>Pagos del estudiante: <span id="nombre-estudiante-detalle"></span></h2>
 		  <button class="submit-btn" onclick="volverAEstudiantes()">Volver a lista de estudiantes</button>
+		  <button id="toggle-formato-factura" class="boton-generar-factura" onclick="cambiarFormatoFactura()">Formato actual: PDF</button>
 		  <table id="tabla-pagos-detalle">
 
 			<tbody></tbody>
@@ -384,14 +391,19 @@
 <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
 
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+
 
 
 
 
   <script type="module">
+	
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
     import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, orderBy, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, getDoc, query, where, orderBy, deleteDoc, doc, updateDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 	import { deleteField } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
 
@@ -730,69 +742,63 @@ let estudiantesTablaCache = null;
 	  e.target.value = formatted;
 	});
 
-	// Función de registro
+	// ---------------------------
+	// ✍️ Registrar pago con nombre
+	// ---------------------------
 	async function registrarPago() {
-	
-	
-	  if (!usuarioActual) {
+	if (!usuarioActual) {
 		alert("Debes iniciar sesión para registrar pagos.");
 		return;
-	  }
+	}
 
-	  const idEstudiante = document.getElementById("select-estudiante").value;
-	  const rawMonto = document.getElementById("pago-monto").value.replace(/\D/g, "");
-	  const monto = parseInt(rawMonto, 10);
-	  const fechaInput = document.getElementById("pago-fecha").value;
-	  const mesPagado = document.getElementById("mes-pagado").value;
+	const idEstudiante = document.getElementById("select-estudiante").value;
+	const rawMonto = document.getElementById("pago-monto").value.replace(/\D/g, "");
+	const monto = parseInt(rawMonto, 10);
+	const fechaInput = document.getElementById("pago-fecha").value;
+	const mesPagado = document.getElementById("mes-pagado").value;
 
-	  if (!idEstudiante) {
+	if (!idEstudiante) {
 		alert("Selecciona un estudiante.");
 		return;
-	  }
-	  if (!monto || monto <= 0) {
+	}
+	if (!monto || monto <= 0) {
 		alert("Ingresa un monto válido.");
 		return;
-	  }
-	  if (!fechaInput) {
+	}
+	if (!fechaInput) {
 		alert("Selecciona una fecha y hora para el pago.");
 		return;
-	  }
-	  if (!mesPagado) {
+	}
+	if (!mesPagado) {
 		alert("Selecciona el mes que está pagando.");
 		return;
-	  }
+	}
 
-	  const fecha = new Date(fechaInput);
-	  const mesRegistro = fecha.getFullYear() + "-" + String(fecha.getMonth() + 1).padStart(2, "0");
-	  const correoUsuario = usuarioActual.email;
+	const fecha = new Date(fechaInput);
+	const mesRegistro = fecha.getFullYear() + "-" + String(fecha.getMonth() + 1).padStart(2, "0");
+	const correoUsuario = usuarioActual.email;
 
-	  try {
+	try {
 		await addDoc(collection(db, "pagos"), {
-		  idEstudiante,
-		  monto,
-		  fecha: fecha.toISOString(),
-		  mesRegistro,
-		  mesPagado,
-		  registradoPor: correoUsuario  // Aquí guardas el correo real
+		idEstudiante,
+		monto,
+		fecha: fecha.toISOString(),
+		mesRegistro,
+		mesPagado,
+		registradoPor: usuarioActual.nombre || correoUsuario
 		});
 
 		alert("Pago registrado por " + monto + " COP.");
 
-		// Limpiar campos
 		document.getElementById("pago-monto").value = "";
 		document.getElementById("pago-fecha").value = "";
 		document.getElementById("mes-pagado").value = "";
 
-	  } catch (e) {
+	} catch (e) {
 		alert("Error registrando pago: " + e.message);
-	  }
 	}
-
-
-
-
-
-    window.registrarPago = registrarPago;
+	}
+	window.registrarPago = registrarPago;
 	
 	function formatearMontoCOP(valor) {
 	  if (typeof valor !== "number") valor = Number(valor) || 0;
@@ -801,6 +807,12 @@ let estudiantesTablaCache = null;
 		
 
 	async function verPagosEstudiante(idEstudiante, nombre) {
+	const usuariosSnapshot = await getDocs(collection(db, "usuarios"));
+	const usuariosMap = {};
+	usuariosSnapshot.forEach(doc => {
+	usuariosMap[doc.id] = doc.data().nombre;
+	});
+
 	window._estudianteActual = { id: idEstudiante, nombre };
 	  showSection("detalle-pagos");
 	  document.getElementById("nombre-estudiante-detalle").textContent = nombre;
@@ -876,14 +888,24 @@ let estudiantesTablaCache = null;
 			<td>${formatearMontoCOP(data.monto)}</td>
 			<td>${etiquetaMesPagado}</td>
 			<td>
-				<button class="boton-eliminar-pago" onclick="eliminarPago('${data.id}', '${idEstudiante}', '${nombre}')">Eliminar</button>
-				<button class="boton-eliminar-pago" onclick="subirFacturaPago('${data.id}')">Subir Factura</button>
-				${data.imagenFactura ? `
+			<button class="boton-eliminar-pago" onclick="eliminarPago('${data.id}', '${idEstudiante}', '${nombre}')">Eliminar</button>
+			<button class="boton-eliminar-pago" onclick="subirFacturaPago('${data.id}')">Subir Factura</button>
+			<button class="boton-generar-factura" onclick="generarFacturaConFormato(
+			'${nombre}', 
+			'${data.fecha}', 
+			${data.monto}, 
+			'${usuariosMap[data.registradoPor] || data.registradoPor || "Desconocido"}', 
+			'${data.mesPagado || "No registrado"}'
+			)">Descargar Factura</button>
+
+
+
+			${data.imagenFactura ? `
 				<img src="${data.imagenFactura}" 
 					alt="Factura" 
 					style="width:40px; height:40px; cursor:pointer; border-radius:5px; vertical-align: middle;"
 					onclick="abrirModalZoom('${data.imagenFactura}', '${data.id}', 'pago')">` : ''
-				}
+			}
 			</td>`;
 			tbody.appendChild(tr);
 
@@ -1275,34 +1297,134 @@ let estudiantesTablaCache = null;
 
 
 	
+	let formatoFacturaPreferido = "pdf";
 	
-	
-    // Generar factura sencilla (solo muestra ventana con detalles, puede adaptarse para PDF)
-    function generarFactura(nombre, fechaPago, monto) {
-      const contenido = `
-        FACTURA DE PAGO
-        ------------------------
-        Estudiante: ${nombre}
-        Fecha de pago: ${fechaPago}
-        Monto: COP ${monto.toLocaleString("es-CO")}
+		function generarFactura(nombre, fechaPago, monto, formato = "pdf", registradoPor = "-", hora = "-", mesPagado = "-") {
+		const textoFactura = `FACTURA DE PAGO\n\nEstudiante: ${nombre}\nFecha de pago: ${fechaPago}\nHora de registro: ${hora}\nMes pagado: ${mesPagado}\nMonto pagado: COP ${monto.toLocaleString("es-CO")}\nRegistrado por: ${registradoPor}\n\n`;
 
-        Gracias por su pago.
-      `;
-      alert(contenido);
-    }
-    window.generarFactura = generarFactura;
+		if (formato === "pdf") {
+			const { jsPDF } = window.jspdf;
+			const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
-    // Control acceso y carga inicial
-	onAuthStateChanged(auth, (user) => {
-	  if (user) {
+			pdf.setFont("helvetica", "bold");
+			pdf.setFontSize(22);
+			pdf.setTextColor(40, 40, 40);
+			pdf.text("FACTURA DE PAGO", 20, 30);
+
+			pdf.setFont("helvetica", "normal");
+			pdf.setFontSize(13);
+			pdf.setTextColor(0, 0, 0);
+
+			const lines = textoFactura.trim().split("\n");
+			lines.forEach((line, i) => {
+			pdf.text(line, 20, 50 + i * 10);
+			});
+
+			pdf.setFontSize(11);
+			pdf.setTextColor(100);
+
+			pdf.save(`factura_${nombre}.pdf`);
+		} else {
+			const canvas = document.createElement("canvas");
+			const ancho = 1000;
+			const alto = 700;
+			canvas.width = ancho;
+			canvas.height = alto;
+			const ctx = canvas.getContext("2d");
+
+			ctx.fillStyle = "#fff";
+			ctx.fillRect(0, 0, ancho, alto);
+
+			ctx.fillStyle = "#2c2c2c";
+			ctx.font = "bold 28px Arial";
+			ctx.fillText("FACTURA DE PAGO", 50, 60);
+
+			ctx.font = "20px Arial";
+			ctx.fillStyle = "#000";
+			const lines = textoFactura.trim().split("\n");
+			lines.forEach((line, i) => {
+			ctx.fillText(line, 50, 110 + i * 40);
+			});
+
+			ctx.font = "16px Arial";
+			ctx.fillStyle = "#444";
+
+			const link = document.createElement("a");
+			link.download = `factura_${nombre}.jpg`;
+			link.href = canvas.toDataURL("image/jpeg", 1.0);
+			link.click();
+		}
+		}
+		window.generarFactura = generarFactura;
+
+		// Función para cambiar el formato con toggle
+		function cambiarFormatoFactura() {
+		formatoFacturaPreferido = formatoFacturaPreferido === "pdf" ? "jpg" : "pdf";
+		const toggle = document.getElementById("toggle-formato-factura");
+		toggle.textContent = `Formato actual: ${formatoFacturaPreferido.toUpperCase()}`;
+		}
+		window.cambiarFormatoFactura = cambiarFormatoFactura;
+
+		function generarFacturaConFormato(nombre, fechaISO, monto, registradoPor = "-", mesPagado = "-") {
+		const fecha = new Date(fechaISO);
+		const hora = fecha.toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit", hour12: true });
+		const fechaFormateada = fecha.toLocaleDateString("es-CO", { day: "2-digit", month: "2-digit", year: "numeric" });
+
+		generarFactura(nombre, fechaFormateada, monto, formatoFacturaPreferido, registradoPor, hora, mesPagado);
+		}
+
+
+		window.generarFacturaConFormato = generarFacturaConFormato;
+
+
+	// --------------------------
+	// 🔐 Autenticación y nombre
+	// --------------------------
+	onAuthStateChanged(auth, async (user) => {
+	if (user) {
 		usuarioActual = user;
 		console.log("Usuario autenticado:", user.email);
-	  } else {
+
+		// Buscar nombre en Firestore
+		const userDocRef = doc(db, "usuarios", user.email);
+		const userSnap = await getDoc(userDocRef);
+
+		if (userSnap.exists()) {
+		usuarioActual.nombre = userSnap.data().nombre;
+		} else {
+		const yaRegistrado = localStorage.getItem("nombreRegistrado_" + user.email);
+		if (!yaRegistrado) {
+			let nombre = prompt("Bienvenido. Ingresa tu nombre para identificar tus registros:");
+			while (!nombre || nombre.length < 2) {
+			nombre = prompt("Nombre inválido. Intenta de nuevo:");
+			}
+
+			await setDoc(userDocRef, { nombre });
+			usuarioActual.nombre = nombre;
+			localStorage.setItem("nombreRegistrado_" + user.email, "true");
+			alert("Tu nombre ha sido registrado como: " + nombre);
+		} else {
+			alert("No se encontró el nombre en Firestore, pero ya lo habías registrado.");
+			// Por seguridad, redirige o fuerza logout si falta en la DB
+			await signOut(auth);
+		}
+		}
+
+
+		// Mostrar el nombre en la interfaz (si quieres)
+		const span = document.getElementById("usuario-nombre-visible");
+		if (span) {
+		span.textContent = usuarioActual.nombre || usuarioActual.email || "Desconocido";
+		}
+
+
+		// Continúa con tu lógica normal
+		cargarEstudiantes();
+
+	} else {
 		usuarioActual = null;
-		console.log("No hay usuario autenticado");
-		// Si no hay usuario, redirigir al login
 		window.location.href = "index.html";
-	  }
+	}
 	});
 
 	// Cerrar sesión al salir o recargar la página
@@ -1317,54 +1439,61 @@ let estudiantesTablaCache = null;
 
 	
 	async function cargarHistorialPagos() {
-	  const tbody = document.querySelector("#tabla-historial-pagos");
-	  tbody.innerHTML = "";
+	const tbody = document.querySelector("#tabla-historial-pagos");
+	tbody.innerHTML = "";
 
-	  try {
-		// Cargar todos los estudiantes una vez
+	try {
+		// Cargar estudiantes
 		const estudiantesSnapshot = await getDocs(collection(db, "estudiantes"));
 		const estudiantesMap = {};
 		estudiantesSnapshot.forEach(doc => {
-		  estudiantesMap[doc.id] = doc.data().nombre;
+		estudiantesMap[doc.id] = doc.data().nombre;
 		});
 
-		// Cargar pagos ordenados descendente por fecha
-		const pagosSnapshot = await getDocs(
-		  query(collection(db, "pagos"), orderBy("fecha", "desc"))
-		);
+		// Cargar usuarios (correo → nombre)
+		const usuariosSnapshot = await getDocs(collection(db, "usuarios"));
+		const usuariosMap = {};
+		usuariosSnapshot.forEach(doc => {
+		usuariosMap[doc.id] = doc.data().nombre; // doc.id = correo
+		});
 
-		// Ahora solo recorremos y usamos el mapa
+		// Cargar pagos ordenados
+		const pagosSnapshot = await getDocs(query(collection(db, "pagos"), orderBy("fecha", "desc")));
+
 		pagosSnapshot.forEach(docPago => {
-		  const pago = docPago.data();
+		const pago = docPago.data();
 
-		  const nombreEstudiante = pago.idEstudiante && estudiantesMap[pago.idEstudiante]
+		const nombreEstudiante = pago.idEstudiante && estudiantesMap[pago.idEstudiante]
 			? estudiantesMap[pago.idEstudiante]
 			: "Desconocido";
 
-		  const montoFormateado = new Intl.NumberFormat("es-CO", {
+		const montoFormateado = new Intl.NumberFormat("es-CO", {
 			style: "currency",
 			currency: "COP",
 			minimumFractionDigits: 0
-		  }).format(pago.monto);
+		}).format(pago.monto);
 
-		  const fechaFormateada = pago.fecha
+		const fechaFormateada = pago.fecha
 			? new Date(pago.fecha).toLocaleString("es-CO")
 			: "Sin fecha";
 
-		  const tr = document.createElement("tr");
-		  tr.innerHTML = `
+		const nombreRegistrador = usuariosMap[pago.registradoPor] || pago.registradoPor || "N/D";
+
+		const tr = document.createElement("tr");
+		tr.innerHTML = `
 			<td>${nombreEstudiante}</td>
 			<td>${montoFormateado}</td>
 			<td>${fechaFormateada}</td>
 			<td>${pago.mesPagado || "N/D"}</td>
-			<td>${pago.registradoPor || "N/D"}</td>
-		  `;
-		  tbody.appendChild(tr);
+			<td>${nombreRegistrador}</td>
+		`;
+		tbody.appendChild(tr);
 		});
-	  } catch (e) {
+	} catch (e) {
 		alert("Error cargando historial de pagos: " + e.message);
-	  }
 	}
+	}
+
 
 	window.cargarHistorialPagos = cargarHistorialPagos;
 	
@@ -1566,8 +1695,8 @@ let estudiantesTablaCache = null;
 
 
 
-
 });
+
   </script>
 
 
