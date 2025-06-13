@@ -210,7 +210,7 @@
         <label for="evento-fecha">Fecha:</label>
         <input type="date" id="evento-fecha" required />
         <label for="evento-presupuesto">Presupuesto:</label>
-        <input type="number" id="evento-presupuesto" min="0" step="any" placeholder="Ej: 50000" />
+        <input type="number" id="evento-presupuesto" min="0" step="any" placeholder="Ej: 50000" inputmode="numeric" pattern="[0-9]*" />
         <label for="evento-materiales">Lista de materiales (uno por línea):</label>
         <textarea id="evento-materiales" rows="3" placeholder="Ejemplo:&#10;Tijeras&#10;Papel&#10;Pegante"></textarea>
         <div style="display:flex; gap:10px; margin-top:10px;">
@@ -360,7 +360,8 @@ window.registrarEgresoModal = registrarEgresoModal;
 // --- Modal editar egreso ---
 let _egresoEditandoId = null;
 function editarEgreso(egresoId) {
-  _egresoEditandoId = egresoId;
+  // Usa window._egresoEditandoId para que sea global y accesible en todos los módulos
+  window._egresoEditandoId = egresoId;
   fetchEgresoData(egresoId).then(data => {
     document.getElementById("editar-titulo-egreso").value = data.titulo || "";
     document.getElementById("editar-descripcion-egreso").value = data.descripcion || "";
@@ -369,14 +370,15 @@ function editarEgreso(egresoId) {
 }
 function cerrarModalEditarEgreso() {
   document.getElementById("modal-editar-egreso").style.display = "none";
-  _egresoEditandoId = null;
+  window._egresoEditandoId = null;
 }
 async function guardarEdicionEgreso() {
   const titulo = document.getElementById("editar-titulo-egreso").value.trim();
   const descripcion = document.getElementById("editar-descripcion-egreso").value.trim();
   if (!titulo) return await window.showAlert("Por favor, ingresa el título.");
   if (!descripcion) return await window.showAlert("Por favor, ingresa la descripción.");
-  await window.guardarEdicionEgresoFirestore(_egresoEditandoId, titulo, descripcion);
+  // Usa window._egresoEditandoId para asegurar que el id no sea null
+  await window.guardarEdicionEgresoFirestore(window._egresoEditandoId, titulo, descripcion);
   cerrarModalEditarEgreso();
 }
 async function fetchEgresoData(id) {

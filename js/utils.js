@@ -16,10 +16,29 @@ export function obtenerNombreMes(mesNumero) {
 
 /**
  * Muestra una alerta bonita (modal) en vez de alert()
- * @param {string} mensaje
+ * @param {string|any} mensaje
  * @returns {Promise<void>}
  */
 export function showAlert(mensaje) {
+  // Asegura que mensaje siempre sea string y nunca null/undefined
+  if (mensaje == null) mensaje = "";
+  if (typeof mensaje !== "string") {
+    if (mensaje && typeof mensaje.message === "string") mensaje = mensaje.message;
+    else mensaje = String(mensaje ?? "");
+  }
+  // Log para depuración
+  try {
+    // Si por alguna razón el mensaje sigue sin ser string, conviértelo
+    mensaje = String(mensaje);
+  } catch {
+    mensaje = "Ocurrió un error inesperado.";
+  }
+  // Loguea el mensaje y el stack para depuración
+  try {
+    console.log("[showAlert] mensaje:", mensaje);
+    // Captura el stack para saber desde dónde se llamó
+    console.trace("[showAlert] stack trace");
+  } catch {}
   return new Promise(resolve => {
     const modal = document.getElementById("alert-modal");
     const msg = document.getElementById("alert-modal-message");
@@ -63,3 +82,6 @@ export function showConfirm(mensaje) {
     };
   });
 }
+
+
+

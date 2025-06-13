@@ -238,25 +238,72 @@ window.editarEgreso = async function(egresoId) {
       return;
     }
     const data = egresoSnap.data();
-    // Abre el modal y rellena los campos
+    // Validación: asegúrate que los campos existen antes de asignar
+    const inputTitulo = document.getElementById("editar-titulo-egreso");
+    const inputDesc = document.getElementById("editar-descripcion-egreso");
+    const modal = document.getElementById("modal-editar-egreso");
+    if (!inputTitulo || !inputDesc || !modal) {
+      console.error("No se encontraron los campos del modal de edición de egreso.");
+      await showAlert("Error interno: No se encontraron los campos del modal de edición.");
+      return;
+    }
     window._egresoEditandoId = egresoId;
-    document.getElementById("editar-titulo-egreso").value = data.titulo || "";
-    document.getElementById("editar-descripcion-egreso").value = data.descripcion || "";
-    document.getElementById("modal-editar-egreso").style.display = "flex";
+    inputTitulo.value = data.titulo || "";
+    inputDesc.value = data.descripcion || "";
+    modal.style.display = "flex";
   } catch (e) {
-    await showAlert("Error editando egreso: " + e.message);
+    console.error("Error editando egreso:", e);
+    await showAlert("Error editando egreso: " + (e && e.message ? e.message : JSON.stringify(e)));
   }
 };
 
 // Editar egreso desde modal
 window.guardarEdicionEgresoFirestore = async function(egresoId, titulo, descripcion) {
   try {
+    // Validación fuerte de argumentos
+    if (!egresoId || typeof egresoId !== "string") {
+      console.error("guardarEdicionEgresoFirestore: egresoId inválido", egresoId);
+      await showAlert("Error interno: egresoId no válido.");
+      return;
+    }
+    if (typeof titulo !== "string" || typeof descripcion !== "string") {
+      console.error("guardarEdicionEgresoFirestore: título o descripción no son string", { titulo, descripcion });
+      await showAlert("Error interno: título o descripción no válidos.");
+      return;
+    }
+    const safeTitulo = titulo.trim();
+    const safeDescripcion = descripcion.trim();
+    if (!safeTitulo) {
+      await showAlert("Por favor, ingresa el título.");
+      return;
+    }
+    if (!safeDescripcion) {
+      await showAlert("Por favor, ingresa la descripción.");
+      return;
+    }
     const egresoRef = doc(db, "egresos", egresoId);
-    await updateDoc(egresoRef, { titulo, descripcion });
+    await updateDoc(egresoRef, {
+      titulo: safeTitulo,
+      descripcion: safeDescripcion
+    });
+    // Cierra el modal ANTES de mostrar la alerta
+    const modal = document.getElementById("modal-editar-egreso");
+    if (modal) modal.style.display = "none";
+    window._egresoEditandoId = null;
     await showAlert("Egreso actualizado.");
     cargarEgresos();
   } catch (e) {
-    await showAlert("Error editando egreso: " + e.message);
+    // Log detallado para depuración
+    console.error("Error en guardarEdicionEgresoFirestore:", e);
+    // Forzar string plano para evitar errores de indexOf internos
+    let msg = "Error editando egreso: ";
+    if (e && typeof e.message === "string") msg += e.message;
+    else msg += JSON.stringify(e);
+    // Cierra el modal también en caso de error
+    const modal = document.getElementById("modal-editar-egreso");
+    if (modal) modal.style.display = "none";
+    window._egresoEditandoId = null;
+    await showAlert(msg);
   }
 };
 
