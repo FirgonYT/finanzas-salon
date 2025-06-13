@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard - Finanzas Salón</title>
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+</head>
+<body>
+  <div id="waves-bg" style="z-index:-1; position:fixed; left:0; top:0; width:100vw; height:100vh; pointer-events:none; opacity:0.7;">
+    <svg width="100%" height="100%" viewBox="0 0 1440 900" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="wave-gradient" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="#232b3e" stop-opacity="0.7"/>
+        </linearGradient>
+      </defs>
+      <path id="wave1" fill="url(#wave-gradient)">
+        <animate attributeName="d" dur="8s" repeatCount="indefinite"
+          values="
+            M0,600 Q360,500 720,600 T1440,600 V900 H0Z;
+            M0,600 Q360,700 720,600 T1440,600 V900 H0Z;
+            M0,600 Q360,500 720,600 T1440,600 V900 H0Z
+          "
+        />
+      </path>
+      <path id="wave2" fill="url(#wave-gradient)" opacity="0.7">
+        <animate attributeName="d" dur="10s" repeatCount="indefinite"
+          values="
+            M0,650 Q480,750 960,650 T1440,650 V900 H0Z;
+            M0,650 Q480,550 960,650 T1440,650 V900 H0Z;
+            M0,650 Q480,750 960,650 T1440,650 V900 H0Z
+          "
+        />
+      </path>
+      <path id="wave3" fill="url(#wave-gradient)" opacity="0.5">
+        <animate attributeName="d" dur="12s" repeatCount="indefinite"
+          values="
+            M0,700 Q720,800 1440,700 V900 H0Z;
+            M0,700 Q720,600 1440,700 V900 H0Z;
+            M0,700 Q720,800 1440,700 V900 H0Z
+          "
+        />
+      </path>
+    </svg>
+  </div>
+  <div id="loader-overlay" style="display:none;">
+    <div class="loader"></div>
+  </div>
+  <div id="sidebar">
+    <button class="active" onclick="showSection('estudiantes')">Estudiantes</button>
+    <button onclick="showSection('pagos')">Pagos</button>
+    <button onclick="showSection('finanzas')">Finanzas</button>
+    <button onclick="showSection('egresos')">Egresos</button>
+    <button onclick="showSection('extras')">Extras</button>
+    <button onclick="showSection('calendario')">Calendario</button>
+    <button onclick="showSection('historial')">Historial</button>
+    <button onclick="showSection('compras')">Compras</button>
+    <div class="sidebar-user-card">
+      <span class="user-icon">👤</span>
+      <div>
+        <strong>Registrado como</strong><br>
+        <span id="usuario-nombre-visible" class="user-name">Cargando...</span>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">Salir</button>
+  </div>
+  <div id="main-content">
+    <!-- Estudiantes -->
+    <section id="estudiantes" class="active">
+      <h2>Lista de Estudiantes (Estado pago mes actual)</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px;">
+        <input type="text" id="busqueda-estudiante" placeholder="Buscar estudiante por nombre..." oninput="filtrarEstudiantes()" style="flex:1; min-width:180px;"/>
+        <button class="submit-btn" onclick="abrirModalFiltroEstudiantes()">Opciones de vista</button>
+        <button class="submit-btn" onclick="abrirModalInforme()">Generar informe</button>
+      </div>
+      <table id="tabla-estudiantes">
+        <thead><tr><th>Nombre</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </section>
+    <!-- Modal para filtros de estudiantes -->
+    <div id="modal-filtro-estudiantes" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(26,32,44,0.55); z-index:3000; align-items:center; justify-content:center;">
+      <div style="background:#232b3e; color:#e2e8f0; border-radius:12px; min-width:220px; max-width:90vw; box-shadow:0 2px 16px rgba(26,32,44,0.18); padding:24px 18px 18px 18px; display:flex; flex-direction:column; align-items:center;">
+        <h3 style="color:#3b82f6; margin-bottom:14px;">Opciones de vista</h3>
+        <label for="ordenar-estado-modal" style="margin-bottom:6px;">Ordenar por estado:</label>
+        <select id="ordenar-estado-modal" style="margin-bottom:18px;">
+          <option value="todos">Todos</option>
+          <option value="al-dia">Pago al día</option>
+          <option value="menor-pago">Al día con menor pago</option>
+          <option value="no-al-dia">No al día</option>
+        </select>
+        <label for="mes-lista-estudiantes-modal" style="margin-bottom:6px;">Mes a visualizar:</label>
+        <select id="mes-lista-estudiantes-modal" style="margin-bottom:18px;">
+          <option value="">Mes actual</option>
+          <option value="05">Mayo</option>
+          <option value="06">Junio</option>
+          <option value="07">Julio</option>
+          <option value="08">Agosto</option>
+          <option value="09">Septiembre</option>
+          <option value="10">Octubre</option>
+          <option value="11">Noviembre</option>
+        </select>
+        <div style="display:flex; gap:10px;">
+          <button class="submit-btn" onclick="aplicarFiltroEstudiantes()">Aplicar</button>
+          <button class="submit-btn" style="background:#374151;" onclick="cerrarModalFiltroEstudiantes()">Cancelar</button>
+        </div>
+      </div>
+    </div>
+    <!-- Pagos por estudiante -->
+    <section id="pagos">
+      <h2>Registrar Pago de Estudiante</h2>
+      <label for="select-estudiante">Seleccione estudiante:</label>
+      <select id="select-estudiante"></select>
+      <label for="pago-monto">Monto:</label>
+      <input type="text" id="pago-monto" placeholder="$15.000" />
+      <label for="pago-fecha">Fecha y hora del pago:</label>
+      <input type="datetime-local" id="pago-fecha" />
+      <label for="mes-pagado">Mes que está pagando:</label>
+      <select id="mes-pagado">
+        <option value="">Seleccione un mes</option>
+        <option value="05">Mayo</option>
+        <option value="06">Junio</option>
+        <option value="07">Julio</option>
+        <option value="08">Agosto</option>
+        <option value="09">Septiembre</option>
+        <option value="10">Octubre</option>
+        <option value="11">Noviembre</option>
+      </select>
+      <button class="submit-btn" onclick="registrarPago()">Registrar Pago</button>
+    </section>
+    <!-- Pagos individuales estudiante -->
+    <section id="detalle-pagos">
+      <h2>Pagos del estudiante: <span id="nombre-estudiante-detalle"></span></h2>
+      <button class="submit-btn" onclick="volverAEstudiantes()">Volver a lista de estudiantes</button>
+      <button id="toggle-formato-factura" class="boton-generar-factura" onclick="cambiarFormatoFactura()">Formato actual: PDF</button>
+      <table id="tabla-pagos-detalle">
+        <tbody></tbody>
+        <tfoot>
+          <tr>
+            <th colspan="2">Total Pagado este mes</th>
+            <th id="total-pagado"></th>
+            <th></th>
+          </tr>
+          <tr>
+            <th colspan="2">Estado</th>
+            <th id="estado-pago-detalle"></th>
+            <th></th>
+          </tr>
+          <tr>
+            <th colspan="2">Total Pagado (histórico)</th>
+            <th id="total-historico"></th>
+            <th></th>
+          </tr>
+        </tfoot>
+      </table>
+    </section>
+    <!-- Finanzas -->
+    <section id="finanzas">
+      <h2>Finanzas</h2>
+      <p><strong>Ingresos Totales (pagos):</strong> <span id="total-ingresos">0</span></p>
+      <p><strong>Egresos Totales:</strong> <span id="total-egresos">0</span></p>
+      <p><strong>Balance:</strong> <span id="balance">0</span></p>
+    </section>
+    <!-- Egresos -->
+    <section id="egresos">
+      <h2>Registrar Egreso</h2>
+      <button class="submit-btn" onclick="abrirModalEgreso()">Registrar egreso</button>
+      <h3>Lista de Egresos</h3>
+      <div id="tabla-egresos-lista"></div>
+    </section>
+    <!-- Extras -->
+    <section id="extras">
+      <h2>Ingresos Extras</h2>
+      <button class="submit-btn" onclick="abrirModalExtra()">Registrar ingreso extra</button>
+      <div id="lista-extras"></div>
+    </section>
+    <!-- Calendario -->
+    <section id="calendario">
+      <h2>Calendario de Eventos</h2>
+      <button class="submit-btn" onclick="abrirModalEvento()">Nuevo evento</button>
+      <div id="calendar"></div>
+    </section>
+    <!-- Compras (Materiales por Evento) -->
+    <section id="compras">
+      <h2>Compras (Materiales por Evento)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Evento</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-compras"></tbody>
+      </table>
+      <div id="materiales-detalle" style="display:none; margin-top:18px;">
+        <h3>Lista de materiales para <span id="nombre-evento-materiales"></span></h3>
+        <ul id="lista-materiales"></ul>
+        <button class="submit-btn" onclick="document.getElementById('materiales-detalle').style.display='none'">Cerrar</button>
+      </div>
+    </section>
+    <!-- Modal para crear/editar evento -->
+    <div id="modal-evento" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(26,32,44,0.85); z-index:2001; align-items:center; justify-content:center;">
+      <form id="form-evento" style="background:#232b3e; padding:24px 18px 18px 18px; border-radius:12px; min-width:270px; max-width:95vw; box-shadow:0 2px 16px rgba(26,32,44,0.18); display:flex; flex-direction:column; gap:10px;">
+        <h3 id="modal-evento-titulo" style="color:#3b82f6; margin:0 0 10px 0;">Nuevo Evento</h3>
+        <input type="hidden" id="evento-id" />
+        <label for="evento-titulo">Título:</label>
+        <input type="text" id="evento-titulo" required maxlength="60" />
+        <label for="evento-fecha">Fecha:</label>
+        <input type="date" id="evento-fecha" required />
+        <label for="evento-presupuesto">Presupuesto:</label>
+        <input type="number" id="evento-presupuesto" min="0" step="any" placeholder="Ej: 50000" />
+        <label for="evento-materiales">Lista de materiales (uno por línea):</label>
+        <textarea id="evento-materiales" rows="3" placeholder="Ejemplo:&#10;Tijeras&#10;Papel&#10;Pegante"></textarea>
+        <div style="display:flex; gap:10px; margin-top:10px;">
+          <button type="submit" class="submit-btn" id="btn-guardar-evento">Guardar</button>
+          <button type="button" class="submit-btn" style="background:#374151;" onclick="cerrarModalEvento()">Cancelar</button>
+          <button type="button" class="submit-btn" id="btn-eliminar-evento" style="background:#e53e3e; display:none;" onclick="eliminarEventoModal()">Eliminar</button>
+        </div>
+      </form>
+    </div>
+    <section id="historial">
+      <h2>Historial de Pagos Registrados</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Estudiante</th>
+            <th>Monto</th>
+            <th>Fecha</th>
+            <th>Mes Pagado</th>
+            <th>Registrado Por</th>
+          </tr>
+        </thead>
+        <tbody id="tabla-historial-pagos"></tbody>
+      </table>
+    </section>
+  </div>
+  <div id="modal-archivos" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+   background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center;">
+    <div style="background:#fff; padding:20px; max-width:80%; max-height:80%; overflow:auto; border-radius:10px;">
+      <h3>Archivos del Egreso</h3>
+      <div id="contenedor-archivos" style="display:flex; flex-wrap:wrap; gap:10px;"></div>
+      <button onclick="cerrarModalArchivos()">Cerrar</button>
+    </div>
+  </div>
+  <div id="modal-zoom" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+   background:rgba(0,0,0,0.9); z-index:1100; justify-content:center; align-items:center; flex-direction: column;">
+    <img id="imagen-zoom" src="" alt="Imagen ampliada" style="max-width:90%; max-height:80%; border-radius:8px; margin-bottom: 10px;">
+    <div>
+      <button class="boton-eliminar-egreso" onclick="borrarImagen()">Borrar Imagen</button>
+      <button class="boton-eliminar-egreso" onclick="cerrarModalZoom()">Cerrar</button>
+    </div>
+  </div>
+  <div id="progress-container" style="display:none; margin-top:10px;">
+    <progress id="progress-bar" value="0" max="100" style="width:100%;"></progress>
+    <span id="progress-text">0%</span>
+  </div>
+  <div id="alert-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(26,32,44,0.55); z-index:3000; align-items:center; justify-content:center;">
+    <div style="background:#232b3e; color:#e2e8f0; border-radius:12px; min-width:220px; max-width:90vw; box-shadow:0 2px 16px rgba(26,32,44,0.18); padding:24px 18px 18px 18px; display:flex; flex-direction:column; align-items:center;">
+      <div id="alert-modal-message" style="margin-bottom:18px; text-align:center; font-size:1.05rem;"></div>
+      <div style="display:flex; gap:12px;">
+        <button id="alert-modal-ok" class="submit-btn" style="min-width:70px;">OK</button>
+        <button id="alert-modal-cancel" class="submit-btn" style="background:#374151; min-width:70px; display:none;">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <div id="modal-informe" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(26,32,44,0.55); z-index:3000; align-items:center; justify-content:center;">
+    <div style="background:#232b3e; color:#e2e8f0; border-radius:12px; min-width:220px; max-width:90vw; box-shadow:0 2px 16px rgba(26,32,44,0.18); padding:24px 18px 18px 18px; display:flex; flex-direction:column; align-items:center;">
+      <h3 style="color:#3b82f6; margin-bottom:14px;">Generar informe de estudiantes</h3>
+      <label for="mes-informe-modal" style="margin-bottom:6px;">Selecciona el mes:</label>
+      <select id="mes-informe-modal" style="margin-bottom:18px;">
+        <option value="">-- Selecciona un mes --</option>
+        <option value="05">Mayo</option>
+        <option value="06">Junio</option>
+        <option value="07">Julio</option>
+        <option value="08">Agosto</option>
+        <option value="09">Septiembre</option>
+        <option value="10">Octubre</option>
+        <option value="11">Noviembre</option>
+      </select>
+      <div style="display:flex; gap:10px;">
+        <button class="submit-btn" onclick="descargarInformeExcelModal()">Descargar</button>
+        <button class="submit-btn" style="background:#374151;" onclick="cerrarModalInforme()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <!-- Modal para registrar egreso -->
+  <div id="modal-egreso" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(26,32,44,0.55); z-index:3000; align-items:center; justify-content:center;">
+    <div style="background:#232b3e; color:#e2e8f0; border-radius:12px; min-width:260px; max-width:90vw; box-shadow:0 2px 16px rgba(26,32,44,0.18); padding:28px 22px 22px 22px; display:flex; flex-direction:column; align-items:center;">
+      <h3 style="color:#3b82f6; margin-bottom:14px;">Registrar Egreso</h3>
+      <label for="titulo-egreso" style="margin-bottom:6px;">Título:</label>
+      <input type="text" id="titulo-egreso" placeholder="Ejemplo: Compra materiales" style="margin-bottom:14px;"/>
+      <label for="descripcion-egreso" style="margin-bottom:6px;">Descripción:</label>
+      <input type="text" id="descripcion-egreso" placeholder="Ejemplo: Detalle de la compra" style="margin-bottom:14px;"/>
+      <label for="monto-egreso" style="margin-bottom:6px;">Monto:</label>
+      <input type="text" id="monto-egreso" placeholder="Ejemplo: $100.000" style="margin-bottom:18px;"/>
+      <div style="display:flex; gap:10px;">
+        <button class="submit-btn" onclick="registrarEgresoModal()">Registrar</button>
+        <button class="submit-btn" style="background:#374151;" onclick="cerrarModalEgreso()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <!-- Modal para editar egreso -->
+  <div id="modal-editar-egreso" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(26,32,44,0.55); z-index:3100; align-items:center; justify-content:center;">
+    <div style="background:#232b3e; color:#e2e8f0; border-radius:12px; min-width:260px; max-width:90vw; box-shadow:0 2px 16px rgba(26,32,44,0.18); padding:28px 22px 22px 22px; display:flex; flex-direction:column; align-items:center;">
+      <h3 style="color:#3b82f6; margin-bottom:14px;">Editar Egreso</h3>
+      <label for="editar-titulo-egreso" style="margin-bottom:6px;">Título:</label>
+      <input type="text" id="editar-titulo-egreso" style="margin-bottom:14px;"/>
+      <label for="editar-descripcion-egreso" style="margin-bottom:6px;">Descripción:</label>
+      <input type="text" id="editar-descripcion-egreso" style="margin-bottom:18px;"/>
+      <div style="display:flex; gap:10px;">
+        <button class="submit-btn" onclick="guardarEdicionEgreso()">Guardar</button>
+        <button class="submit-btn" style="background:#374151;" onclick="cerrarModalEditarEgreso()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <!-- Modal para registrar extra -->
+  <div id="modal-extra" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(26,32,44,0.55); z-index:3200; align-items:center; justify-content:center;">
+    <div style="background:#232b3e; color:#e2e8f0; border-radius:12px; min-width:260px; max-width:90vw; box-shadow:0 2px 16px rgba(26,32,44,0.18); padding:28px 22px 22px 22px; display:flex; flex-direction:column; align-items:center;">
+      <h3 style="color:#3b82f6; margin-bottom:14px;">Registrar Ingreso Extra</h3>
+      <label for="titulo-extra" style="margin-bottom:6px;">Título:</label>
+      <input type="text" id="titulo-extra" placeholder="Ejemplo: Venta de camisetas" style="margin-bottom:14px;"/>
+      <label for="descripcion-extra" style="margin-bottom:6px;">Descripción:</label>
+      <input type="text" id="descripcion-extra" placeholder="Ejemplo: Se vendieron 10 camisetas" style="margin-bottom:14px;"/>
+      <label for="fecha-extra" style="margin-bottom:6px;">Fecha y hora:</label>
+      <input type="datetime-local" id="fecha-extra" style="margin-bottom:14px;"/>
+      <label for="monto-extra" style="margin-bottom:6px;">Monto:</label>
+      <input type="text" id="monto-extra" placeholder="Ejemplo: $50.000" style="margin-bottom:18px;"/>
+      <div style="display:flex; gap:10px;">
+        <button class="submit-btn" onclick="registrarExtraModal()">Registrar</button>
+        <button class="submit-btn" style="background:#374151;" onclick="cerrarModalExtra()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  <!-- Scripts optimizados al final para mejor velocidad -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+  <script type="module" src="js/dashboard.js"></script>
+  <script>
+function abrirModalEgreso() {
+  document.getElementById("modal-egreso").style.display = "flex";
+  document.getElementById("titulo-egreso").value = "";
+  document.getElementById("descripcion-egreso").value = "";
+  document.getElementById("monto-egreso").value = "";
+}
+function cerrarModalEgreso() {
+  document.getElementById("modal-egreso").style.display = "none";
+}
+
+// --- Añade esto para el modal de egreso ---
+async function registrarEgresoModal() {
+  await window.registrarEgreso();
+  cerrarModalEgreso();
+}
+window.registrarEgresoModal = registrarEgresoModal;
+
+// --- Modal editar egreso ---
+let _egresoEditandoId = null;
+function editarEgreso(egresoId) {
+  _egresoEditandoId = egresoId;
+  fetchEgresoData(egresoId).then(data => {
+    document.getElementById("editar-titulo-egreso").value = data.titulo || "";
+    document.getElementById("editar-descripcion-egreso").value = data.descripcion || "";
+    document.getElementById("modal-editar-egreso").style.display = "flex";
+  });
+}
+function cerrarModalEditarEgreso() {
+  document.getElementById("modal-editar-egreso").style.display = "none";
+  _egresoEditandoId = null;
+}
+async function guardarEdicionEgreso() {
+  const titulo = document.getElementById("editar-titulo-egreso").value.trim();
+  const descripcion = document.getElementById("editar-descripcion-egreso").value.trim();
+  if (!titulo) return await window.showAlert("Por favor, ingresa el título.");
+  if (!descripcion) return await window.showAlert("Por favor, ingresa la descripción.");
+  await window.guardarEdicionEgresoFirestore(_egresoEditandoId, titulo, descripcion);
+  cerrarModalEditarEgreso();
+}
+async function fetchEgresoData(id) {
+  const { getFirestore, doc, getDoc } = window.firebase || {};
+  if (window.firebase && getFirestore && doc && getDoc) {
+    const db = getFirestore();
+    const snap = await getDoc(doc(db, "egresos", id));
+    return snap.data() || {};
+  }
+  // fallback: usa la función de egresos.js si está expuesta
+  if (window.getEgresoData) return await window.getEgresoData(id);
+  return {};
+}
+window.editarEgreso = editarEgreso;
+window.cerrarModalEditarEgreso = cerrarModalEditarEgreso;
+window.guardarEdicionEgreso = guardarEdicionEgreso;
+
+// --- Modal extras ---
+function abrirModalExtra() {
+  document.getElementById("modal-extra").style.display = "flex";
+  document.getElementById("titulo-extra").value = "";
+  document.getElementById("descripcion-extra").value = "";
+  document.getElementById("fecha-extra").value = "";
+  document.getElementById("monto-extra").value = "";
+}
+function cerrarModalExtra() {
+  document.getElementById("modal-extra").style.display = "none";
+}
+async function registrarExtraModal() {
+  const titulo = document.getElementById("titulo-extra").value.trim();
+  const descripcion = document.getElementById("descripcion-extra").value.trim();
+  const fecha = document.getElementById("fecha-extra").value;
+  const montoRaw = document.getElementById("monto-extra").value;
+  const monto = parseInt(montoRaw.replace(/\D/g, ""), 10);
+  if (!titulo) return await window.showAlert("Por favor, ingresa el título.");
+  if (!descripcion) return await window.showAlert("Por favor, ingresa la descripción.");
+  if (!fecha) return await window.showAlert("Por favor, selecciona la fecha y hora.");
+  if (!monto || monto <= 0) return await window.showAlert("Ingresa un monto válido.");
+  const exito = await window.registrarExtra(titulo, descripcion, fecha, monto);
+  if (exito) cerrarModalExtra();
+}
+window.abrirModalExtra = abrirModalExtra;
+window.cerrarModalExtra = cerrarModalExtra;
+window.registrarExtraModal = registrarExtraModal;
+
+window.cargarCompras = async function() {
+  if (!window.obtenerEventosConMateriales) return;
+  // Siempre espera a que los eventos estén actualizados antes de mostrar la lista
+  const eventos = await window.obtenerEventosConMateriales();
+  const tbody = document.getElementById("tabla-compras");
+  tbody.innerHTML = "";
+  eventos.forEach(ev => {
+    // Ya no mostramos el presupuesto aquí, solo el título con link
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>
+        <div class="compras-card">
+          <a href="#" onclick="mostrarMaterialesEvento('${ev.id}');return false;">${ev.title}</a>
+        </div>
+      </td>
+      <td>${ev.date ? new Date(ev.date).toLocaleDateString() : ""}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+};
+window.mostrarMaterialesEvento = function(id) {
+  if (!window._eventosMaterialesCache) return;
+  const ev = window._eventosMaterialesCache.find(e => e.id === id);
+  if (!ev) return;
+  document.getElementById("nombre-evento-materiales").textContent = ev.title;
+
+  // Presupuesto en la tarjeta de materiales
+  let presupuestoHtml = "";
+  if (ev.presupuesto && !isNaN(ev.presupuesto) && Number(ev.presupuesto) > 0) {
+    if (window.formatearMontoCOP) {
+      presupuestoHtml = `<div class="presupuesto-compras-card">Presupuesto: ${window.formatearMontoCOP(ev.presupuesto)}</div>`;
+    } else {
+      presupuestoHtml = `<div class="presupuesto-compras-card">Presupuesto: $${Number(ev.presupuesto).toLocaleString("es-CO")}</div>`;
+    }
+  }
+
+  const ul = document.getElementById("lista-materiales");
+  ul.innerHTML = "";
+  (ev.materiales || []).forEach(mat => {
+    const li = document.createElement("li");
+    li.textContent = mat;
+    ul.appendChild(li);
+  });
+
+  // Inserta el presupuesto antes de la lista de materiales (si no existe)
+  const detalle = document.getElementById("materiales-detalle");
+  let oldPresupuesto = detalle.querySelector(".presupuesto-compras-card");
+  if (oldPresupuesto) oldPresupuesto.remove();
+  if (presupuestoHtml) {
+    ul.insertAdjacentHTML("beforebegin", presupuestoHtml);
+  }
+
+  detalle.style.display = "block";
+};
+
+window.showSection = function showSection(id) {
+  const sections = document.querySelectorAll("#main-content > section");
+  sections.forEach(sec => {
+    sec.classList.remove("active");
+    if (sec.id === id) {
+      sec.classList.add("active");
+      if (id === 'compras') {
+        if (window.cargarCompras) window.cargarCompras();
+      }
+    }
+  });
+  const buttons = document.querySelectorAll("#sidebar button");
+  buttons.forEach(btn => {
+    btn.classList.remove("active");
+    if (btn.textContent.trim() === id.charAt(0).toUpperCase() + id.slice(1)) {
+      btn.classList.add("active");
+    }
+  });
+};
+
+function abrirModalEvento() {
+  document.getElementById("modal-evento").style.display = "flex";
+  document.getElementById("form-evento").reset();
+  document.getElementById("evento-id").value = "";
+  document.getElementById("btn-eliminar-evento").style.display = "none";
+}
+function cerrarModalEvento() {
+  document.getElementById("modal-evento").style.display = "none";
+}
+
+// --- Carga inicial de eventos en el calendario ---
+document.addEventListener("DOMContentLoaded", function() {
+  const calendarEl = document.getElementById("calendar");
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: 'dayGridMonth',
+    headerToolbar: {
+      left: 'prev,next today',
+      center: 'title',
+      right: 'dayGridMonth,timeGridWeek,timeGridDay'
+    },
+    editable: true,
+    selectable: true,
+    events: [],
+    eventClick: function(info) {
+      info.jsEvent.preventDefault();
+      const id = info.event.id;
+      if (id) {
+        mostrarDetalleEvento(id);
+      } else {
+        abrirModalEvento();
+      }
+    },
+    dateClick: function(info) {
+      abrirModalEvento();
+      document.getElementById("evento-fecha").value = info.dateStr;
+    }
+  });
+  calendar.render();
+  window.calendar = calendar;
+});
+
+function mostrarDetalleEvento(id) {
+  const evento = window.eventos.find(ev => ev.id === id);
+  if (!evento) return;
+  document.getElementById("evento-id").value = evento.id;
+  document.getElementById("evento-titulo").value = evento.title;
+  document.getElementById("evento-fecha").value = evento.date ? new Date(evento.date).toISOString().slice(0, 10) : "";
+  document.getElementById("evento-presupuesto").value = evento.presupuesto || 0;
+  document.getElementById("evento-materiales").value = (evento.materiales || []).join("\n");
+  document.getElementById("btn-eliminar-evento").style.display = "inline-block";
+  abrirModalEvento();
+}
+
+function eliminarEventoModal() {
+  const id = document.getElementById("evento-id").value;
+  if (!id) return;
+  window.eliminarEvento(id);
+  cerrarModalEvento();
+}
+
+// --- Funciones de carga de datos ---
+window.cargarEstudiantes = async function() {
+  // Solo llama a la función del módulo, no intentes usar window.obtenerEstudiantes
+  await window.estudiantes.cargarEstudiantes?.();
+};
+window.cargarEventos = async function() {
+  if (!window.obtenerEventosConMateriales) return;
+  // Obtiene y actualiza window.eventos usando la función del módulo calendario.js
+  await window.obtenerEventosConMateriales();
+};
+
+// Llama a cargarEventos después de guardar un evento
+document.addEventListener("DOMContentLoaded", function() {
+  // ...existing code...
+  // Sobrescribe el submit del formulario de evento para recargar compras
+  const form = document.getElementById("form-evento");
+  if (form) {
+    form.addEventListener("submit", async function() {
+      setTimeout(() => {
+        if (window.cargarCompras) window.cargarCompras();
+      }, 1000); // Espera a que se guarde el evento
+    });
+  }
+});
+  </script>
+</body>
+</html>

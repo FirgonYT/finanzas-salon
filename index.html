@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login - Finanzas Salón</title>
+  <link rel="stylesheet" href="css/dashboard.css" />
+  <style>
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #1a202c;
+      overflow: hidden;
+      position: relative;
+    }
+    /* Fondo de ondas animadas */
+    #waves-bg {
+      position: fixed;
+      left: 0; top: 0;
+      width: 100vw; height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.85;
+    }
+    /* Animación de entrada para el login */
+    #login-box {
+      animation: fadeInUp 1s cubic-bezier(.23,1.01,.32,1) both;
+      z-index: 1;
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(60px) scale(0.97);}
+      to { opacity: 1; transform: none;}
+    }
+    /* Sombra extra para resaltar el login */
+    #login-box {
+      box-shadow: 0 8px 32px 0 rgba(31,38,135,0.18), 0 2px 16px rgba(26,32,44,0.13);
+      border: 1.5px solid rgba(59,130,246,0.10);
+      backdrop-filter: blur(2px);
+    }
+    /* Responsive login */
+    @media (max-width: 600px) {
+      #login-box {
+        width: 96vw !important;
+        min-width: 0 !important;
+        padding: 18px 4vw 18px 4vw !important;
+        border-radius: 10px !important;
+      }
+      #login-box h2 {
+        font-size: 1.2rem !important;
+        margin-bottom: 12px !important;
+      }
+      #login-box input, #login-box button {
+        font-size: 13px !important;
+        padding: 8px !important;
+        border-radius: 5px !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Fondo de ondas SVG animadas -->
+  <div id="waves-bg">
+    <svg width="100%" height="100%" viewBox="0 0 1440 900" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="wave-gradient" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#3b82f6" stop-opacity="0.25"/>
+          <stop offset="100%" stop-color="#232b3e" stop-opacity="0.7"/>
+        </linearGradient>
+      </defs>
+      <path id="wave1" fill="url(#wave-gradient)">
+        <animate attributeName="d" dur="8s" repeatCount="indefinite"
+          values="
+            M0,600 Q360,500 720,600 T1440,600 V900 H0Z;
+            M0,600 Q360,700 720,600 T1440,600 V900 H0Z;
+            M0,600 Q360,500 720,600 T1440,600 V900 H0Z
+          "
+        />
+      </path>
+      <path id="wave2" fill="url(#wave-gradient)" opacity="0.7">
+        <animate attributeName="d" dur="10s" repeatCount="indefinite"
+          values="
+            M0,650 Q480,750 960,650 T1440,650 V900 H0Z;
+            M0,650 Q480,550 960,650 T1440,650 V900 H0Z;
+            M0,650 Q480,750 960,650 T1440,650 V900 H0Z
+          "
+        />
+      </path>
+      <path id="wave3" fill="url(#wave-gradient)" opacity="0.5">
+        <animate attributeName="d" dur="12s" repeatCount="indefinite"
+          values="
+            M0,700 Q720,800 1440,700 V900 H0Z;
+            M0,700 Q720,600 1440,700 V900 H0Z;
+            M0,700 Q720,800 1440,700 V900 H0Z
+          "
+        />
+      </path>
+    </svg>
+  </div>
+  <div id="login-box" style="
+    background: #232b3e;
+    padding: 38px 32px 32px 32px;
+    border-radius: 14px;
+    width: 340px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+  ">
+    <h2 style="color: #3b82f6; margin-bottom: 22px; font-family: 'Inter', 'Segoe UI', Arial, sans-serif;">Iniciar sesión</h2>
+    <input type="email" id="email" placeholder="Correo electrónico" style="
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0 18px 0;
+      border-radius: 7px;
+      border: 1.5px solid #374151;
+      background: #232b3e;
+      color: #e2e8f0;
+      font-size: 16px;
+      font-family: inherit;
+      box-shadow: 0 1px 4px rgba(26,32,44,0.04);
+      outline: none;
+      transition: border 0.2s, box-shadow 0.2s;
+    " />
+    <input type="password" id="password" placeholder="Contraseña" style="
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0 18px 0;
+      border-radius: 7px;
+      border: 1.5px solid #374151;
+      background: #232b3e;
+      color: #e2e8f0;
+      font-size: 16px;
+      font-family: inherit;
+      box-shadow: 0 1px 4px rgba(26,32,44,0.04);
+      outline: none;
+      transition: border 0.2s, box-shadow 0.2s;
+    " />
+    <button onclick="login()" style="
+      width: 100%;
+      padding: 12px 0;
+      background: linear-gradient(90deg, #2563eb 0%, #3b82f6 100%);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      font-size: 17px;
+      font-weight: 600;
+      margin-top: 8px;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 8px rgba(26,32,44,0.09);
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+    "
+    onmouseover="this.style.background='linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)';this.style.transform='scale(1.07)'"
+    onmouseout="this.style.background='linear-gradient(90deg, #2563eb 0%, #3b82f6 100%)';this.style.transform='scale(1)'"
+    >Entrar</button>
+  </div>
+  <script type="module" src="js/index.js"></script>
+  <script>
+    // Permitir login con Enter
+    document.addEventListener('DOMContentLoaded', function() {
+      const loginBox = document.getElementById('login-box');
+      loginBox.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          window.login();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
